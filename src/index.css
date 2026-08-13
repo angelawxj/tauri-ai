@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+@theme {
+  /* VSCode Dark+ 主题色板 */
+  --color-vscode-bg: #1e1e1e;
+  --color-vscode-sidebar: #252526;
+  --color-vscode-activitybar: #333333;
+  --color-vscode-titlebar: #3c3c3c;
+  --color-vscode-panel: #252526;
+  --color-vscode-panel-header: #2d2d2d;
+  --color-vscode-border: #2b2b2b;
+  --color-vscode-border-light: #454545;
+  --color-vscode-fg: #cccccc;
+  --color-vscode-fg-muted: #9d9d9d;
+  --color-vscode-fg-dim: #6a6a6a;
+  --color-vscode-accent: #007acc;
+  --color-vscode-accent-hover: #1177bb;
+  --color-vscode-button: #0e639c;
+  --color-vscode-button-hover: #1177bb;
+  --color-vscode-button-fg: #ffffff;
+  --color-vscode-input-bg: #3c3c3c;
+  --color-vscode-input-border: #3c3c3c;
+  --color-vscode-list-hover: #2a2d2e;
+  --color-vscode-list-active: #094771;
+  --color-vscode-list-inactive: #37373d;
+  --color-vscode-badge-bg: #4d4d4d;
+  --color-vscode-scrollbar: rgba(121, 121, 121, 0.4);
+  --color-vscode-scrollbar-hover: rgba(121, 121, 121, 0.7);
+
+  /* Git 状态色（对齐 VSCode SCM decoration 配色） */
+  --color-git-modified: #e2c08d;
+  --color-git-added: #73c991;
+  --color-git-deleted: #c74e39;
+  --color-git-renamed: #73c991;
+  --color-git-untracked: #73c991;
+  --color-git-conflict: #c74e39;
+
+  --font-sans: "Segoe UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background-color: var(--color-vscode-bg);
+  color: var(--color-vscode-fg);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* VSCode 风格细滚动条 */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: var(--color-vscode-scrollbar);
+  border: 2px solid transparent;
+  background-clip: content-box;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-vscode-scrollbar-hover);
+}
+
+textarea {
+  font-family: inherit;
+}
