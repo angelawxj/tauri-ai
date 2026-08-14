@@ -145,7 +145,7 @@ pub fn git_stage_all() -> Result<(), String> {
 #[tauri::command]
 pub fn git_unstage(path: String) -> Result<(), String> {
     let repo = open_repo()?;
-    match repo.head() {
+    let result = match repo.head() {
         Ok(head) => {
             let commit = head.peel_to_commit().map_err(|e| e.to_string())?;
             repo.reset_default(Some(commit.as_object()), [path.as_str()])
@@ -159,13 +159,14 @@ pub fn git_unstage(path: String) -> Result<(), String> {
                 .map_err(|e| e.to_string())?;
             index.write().map_err(|e| e.to_string())
         }
-    }
+    };
+    result
 }
 
 #[tauri::command]
 pub fn git_unstage_all() -> Result<(), String> {
     let repo = open_repo()?;
-    match repo.head() {
+    let result = match repo.head() {
         Ok(head) => {
             let commit = head.peel_to_commit().map_err(|e| e.to_string())?;
             repo.reset_default(Some(commit.as_object()), ["*"])
@@ -176,7 +177,8 @@ pub fn git_unstage_all() -> Result<(), String> {
             index.clear().map_err(|e| e.to_string())?;
             index.write().map_err(|e| e.to_string())
         }
-    }
+    };
+    result
 }
 
 #[tauri::command]
