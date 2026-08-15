@@ -89,14 +89,13 @@ export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: Histor
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="flex min-w-0 flex-1 items-center gap-1 px-0.5 text-left text-[12px] font-semibold tracking-wide text-[#000]"
+            className="flex min-w-0 flex-1 items-center gap-1 px-0.5 text-left text-[12px] font-semibold tracking-wide text-vscode-fg"
           >
             {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
             <span className="truncate">{t.git.commitHistoryTitle}</span>
             {commits.length > 0 && <span className="text-[12px] font-medium tabular-nums">{commits.length}</span>}
           </button>
-          <span title="What are refs?" className="my-auto flex h-4 w-4 items-center justify-center rounded-full border border-vscode-fg-dim text-[10px] text-vscode-fg-muted">?</span>
-        <button
+          <button
           type="button"
           title={t.common.refresh}
           onClick={(e) => {
@@ -107,7 +106,7 @@ export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: Histor
           className="my-auto ml-1 rounded p-0.5 text-vscode-fg-muted hover:text-vscode-fg"
         >
           <IconRefresh size={12} />
-        </button>
+          </button>
         </div>
       </div>
 

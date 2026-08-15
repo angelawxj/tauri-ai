@@ -75,10 +75,11 @@ export default function CommitGraph({ row, isHead = false }: CommitGraphProps) {
   const cx = LANE_WIDTH * (circleIndex + 1);
   const isMerge = row.parentCount > 1;
   const isBoundary = row.kind === "incoming-changes" || row.kind === "outgoing-changes";
+  const boundaryBackground = "var(--color-vscode-bg)";
   return (
     <svg aria-hidden="true" className="shrink-0 overflow-visible" width={width} height={ROW_HEIGHT} viewBox={`0 0 ${width} ${ROW_HEIGHT}`}>
       {paths}
-      {isHead ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 3} fill={graphColor(circleColor)} stroke="var(--color-vscode-panel)" strokeWidth={CIRCLE_STROKE_WIDTH} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_STROKE_WIDTH} fill="var(--color-vscode-panel)" /></> : isBoundary ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 3} fill={graphColor(circleColor)} stroke="var(--color-vscode-panel)" strokeWidth={CIRCLE_STROKE_WIDTH} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill="var(--color-vscode-panel)" stroke="var(--color-vscode-panel)" strokeWidth={CIRCLE_STROKE_WIDTH + 1} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill="none" stroke={graphColor(circleColor)} strokeDasharray="4 2" strokeWidth={CIRCLE_STROKE_WIDTH - 1} /></> : isMerge ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill={graphColor(circleColor)} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS - 1.5} fill="var(--color-vscode-panel)" /></> : <circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS} fill={graphColor(circleColor)} />}
+      {isHead ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 3} fill={graphColor(circleColor)} stroke="var(--color-vscode-panel)" strokeWidth={CIRCLE_STROKE_WIDTH} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_STROKE_WIDTH} fill="var(--color-vscode-panel)" /></> : isBoundary ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 3} fill={graphColor(circleColor)} stroke={boundaryBackground} strokeWidth={CIRCLE_STROKE_WIDTH} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill={boundaryBackground} stroke={boundaryBackground} strokeWidth={CIRCLE_STROKE_WIDTH + 1} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill="none" stroke={graphColor(circleColor)} strokeDasharray="4 2" strokeWidth={CIRCLE_STROKE_WIDTH - 1} /></> : isMerge ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill={graphColor(circleColor)} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS - 1.5} fill="var(--color-vscode-panel)" /></> : <circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS} fill={graphColor(circleColor)} />}
     </svg>
   );
 }
