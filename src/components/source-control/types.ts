@@ -9,6 +9,8 @@ export interface FileEntry {
 
 export interface GitStatus {
   branch: string;
+  /** Current HEAD revision; changes even when the working tree stays clean. */
+  head?: string | null;
   repoName: string;
   repoPath: string;
   staged: FileEntry[];

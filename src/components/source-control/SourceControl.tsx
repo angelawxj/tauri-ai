@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { IconGitMerge, IconRefresh, IconSearch, IconSparkle, IconUpload, IconX } from "../icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
@@ -28,6 +28,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [hasOutgoingChanges, setHasOutgoingChanges] = useState(false);
   const [baseRefName, setBaseRefName] = useState<string | undefined>(undefined);
   const [committedFiles, setCommittedFiles] = useState<FileEntry[]>([]);
+  const observedHeadRef = useRef<string | null | undefined>(undefined);
 
   const staged = status?.staged ?? [];
   const conflicts = (status?.unstaged ?? []).filter((entry) => entry.status === "C");
@@ -63,7 +64,16 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
 
   useEffect(() => {
     void refreshOutgoingStatus();
-  }, [status?.branch]);
+  }, [status]);
+
+  useEffect(() => {
+    const head = status?.head;
+    if (!head) return;
+    if (observedHeadRef.current && observedHeadRef.current !== head) {
+      setHistoryTick((tick) => tick + 1);
+    }
+    observedHeadRef.current = head;
+  }, [status?.head]);
 
   // This is a branch comparison (base..HEAD), not a history cache.  A commit,
   // push, pull, or an external Git client can change HEAD while the branch name

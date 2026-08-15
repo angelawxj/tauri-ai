@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { GitStatus } from "./types";
 import { useI18n } from "../../i18n";
@@ -18,12 +18,23 @@ export function useGitStatus(): UseGitStatusResult {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const inFlightRef = useRef(false);
 
-  const refresh = useCallback(async () => {
-    setLoading(true);
+  const sameStatus = (left: GitStatus | null, right: GitStatus): boolean =>
+    left?.branch === right.branch &&
+    left.head === right.head &&
+    left.repoName === right.repoName &&
+    left.repoPath === right.repoPath &&
+    JSON.stringify(left.staged) === JSON.stringify(right.staged) &&
+    JSON.stringify(left.unstaged) === JSON.stringify(right.unstaged);
+
+  const refresh = useCallback(async (silent = false) => {
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
+    if (!silent) setLoading(true);
     try {
       const next = await api.status();
-      setStatus(next);
+      setStatus((current) => sameStatus(current, next) ? current : next);
       setError(null);
       setUnavailable(false);
     } catch (err) {
@@ -34,12 +45,27 @@ export function useGitStatus(): UseGitStatusResult {
         setError(err instanceof Error ? err.message : t.git.loadStatusFailed);
       }
     } finally {
-      setLoading(false);
+      inFlightRef.current = false;
+      if (!silent) setLoading(false);
     }
   }, [t]);
 
   useEffect(() => {
     void refresh();
+  }, [refresh]);
+
+  useEffect(() => {
+    const refreshSilently = () => {
+      if (document.visibilityState === "visible") void refresh(true);
+    };
+    const timer = window.setInterval(refreshSilently, 5000);
+    window.addEventListener("focus", refreshSilently);
+    document.addEventListener("visibilitychange", refreshSilently);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener("focus", refreshSilently);
+      document.removeEventListener("visibilitychange", refreshSilently);
+    };
   }, [refresh]);
 
   return { status, loading, error, unavailable, refresh };

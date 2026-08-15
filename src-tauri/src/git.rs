@@ -16,6 +16,9 @@ pub struct FileEntry {
 #[derive(Serialize)]
 pub struct GitStatus {
     pub branch: String,
+    /// HEAD is included even on a clean working tree so the renderer can
+    /// notice commits made by another Git client.
+    pub head: Option<String>,
     #[serde(rename = "repoName")]
     pub repo_name: String,
     #[serde(rename = "repoPath")]
@@ -166,9 +169,12 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
     let repo = open_repo(&state)?;
     let root = repo_root(&state);
 
-    let branch = match repo.head() {
-        Ok(head) => head.shorthand().unwrap_or("HEAD").to_string(),
-        Err(_) => "(无提交)".to_string(),
+    let (branch, head) = match repo.head() {
+        Ok(reference) => (
+            reference.shorthand().unwrap_or("HEAD").to_string(),
+            reference.target().map(|oid| oid.to_string()),
+        ),
+        Err(_) => ("(无提交)".to_string(), None),
     };
 
     let mut opts = git2::StatusOptions::new();
@@ -219,6 +225,7 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
 
     Ok(GitStatus {
         branch,
+        head,
         repo_name: root
             .file_name()
             .and_then(|name| name.to_str())
