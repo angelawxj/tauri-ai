@@ -44,4 +44,8 @@ export const api = {
   branches: () => call<BranchInfo[]>("git_branches"),
   checkoutBranch: (name: string) => call<void>("git_checkout_branch", { name }),
   push: (branch: string) => call<string>("git_push", { branch }),
+  forcePush: (branch: string) => call<string>("git_force_push", { branch }),
+  fetch: () => call<string>("git_fetch"),
+  pull: () => call<string>("git_pull"),
+  rebaseMain: () => call<string>("git_rebase_main"),
 };

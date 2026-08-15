@@ -102,12 +102,12 @@ export function IconFile({ size = 16, className }: IconProps) {
   );
 }
 
-/** Compact document-with-code-lines glyph used by the Source Control history list. */
+/** Orca-style code document glyph used by Source Control file rows. */
 export function IconCommitFile({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
       <path d="M4 1.8h5.2L12 4.6v9.6H4z" />
-      <path d="M9.2 1.8v2.8H12M6 7h4M6 9.2h4M6 11.4h2.5" />
+      <path d="M9.2 1.8v2.8H12M6.4 7.2 4.9 8.6l1.5 1.4M9.6 7.2l1.5 1.4-1.5 1.4" />
     </svg>
   );
 }

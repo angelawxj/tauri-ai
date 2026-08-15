@@ -21,6 +21,10 @@ fn main() {
             git::git_branches,
             git::git_checkout_branch,
             git::git_push,
+            git::git_fetch,
+            git::git_pull,
+            git::git_force_push,
+            git::git_rebase_main,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

@@ -7,11 +7,17 @@ use std::path::{Path, PathBuf};
 pub struct FileEntry {
     pub path: String,
     pub status: String,
+    pub additions: u32,
+    pub deletions: u32,
 }
 
 #[derive(Serialize)]
 pub struct GitStatus {
     pub branch: String,
+    #[serde(rename = "repoName")]
+    pub repo_name: String,
+    #[serde(rename = "repoPath")]
+    pub repo_path: String,
     pub staged: Vec<FileEntry>,
     pub unstaged: Vec<FileEntry>,
 }
@@ -100,6 +106,34 @@ fn status_char(s: Status, staged: bool) -> Option<&'static str> {
     None
 }
 
+fn numstat(args: &[&str]) -> HashMap<String, (u32, u32)> {
+    let output = std::process::Command::new("git")
+        .args(args)
+        .current_dir(repo_root())
+        .output();
+    let Ok(output) = output else { return HashMap::new() };
+    if !output.status.success() {
+        return HashMap::new();
+    }
+    String::from_utf8_lossy(&output.stdout)
+        .lines()
+        .filter_map(|line| {
+            let mut parts = line.splitn(3, '\t');
+            let additions = parts.next()?.parse::<u32>().ok()?;
+            let deletions = parts.next()?.parse::<u32>().ok()?;
+            let path = parts.next()?.to_string();
+            Some((path, (additions, deletions)))
+        })
+        .collect()
+}
+
+fn untracked_numstat(path: &str) -> (u32, u32) {
+    let lines = std::fs::read_to_string(repo_root().join(path))
+        .map(|content| content.lines().count() as u32)
+        .unwrap_or(0);
+    (lines, 0)
+}
+
 #[tauri::command]
 pub fn git_status() -> Result<GitStatus, String> {
     let repo = open_repo()?;
@@ -115,6 +149,8 @@ pub fn git_status() -> Result<GitStatus, String> {
 
     let mut staged = Vec::new();
     let mut unstaged = Vec::new();
+    let staged_numstat = numstat(&["diff", "--numstat", "--cached"]);
+    let unstaged_numstat = numstat(&["diff", "--numstat"]);
 
     for entry in statuses.iter() {
         let s = entry.status();
@@ -124,21 +160,33 @@ pub fn git_status() -> Result<GitStatus, String> {
         };
 
         if let Some(st) = status_char(s, true) {
+            let (additions, deletions) = staged_numstat.get(&path).copied().unwrap_or((0, 0));
             staged.push(FileEntry {
                 path: path.clone(),
                 status: st.to_string(),
+                additions,
+                deletions,
             });
         }
         if let Some(st) = status_char(s, false) {
+            let (additions, deletions) = if st == "U" { untracked_numstat(&path) } else { unstaged_numstat.get(&path).copied().unwrap_or((0, 0)) };
             unstaged.push(FileEntry {
                 path,
                 status: st.to_string(),
+                additions,
+                deletions,
             });
         }
     }
 
     Ok(GitStatus {
         branch,
+        repo_name: repo_root()
+            .file_name()
+            .and_then(|name| name.to_str())
+            .unwrap_or("repository")
+            .to_string(),
+        repo_path: repo_root().to_string_lossy().to_string(),
         staged,
         unstaged,
     })
@@ -432,6 +480,8 @@ pub fn git_commit_files(hash: String) -> Result<Vec<FileEntry>, String> {
         files.push(FileEntry {
             path,
             status: status.to_string(),
+            additions: 0,
+            deletions: 0,
         });
     }
 
@@ -513,13 +563,19 @@ pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
         None => return Ok(Vec::new()),
     };
     let branch_name = head.shorthand().unwrap_or("");
+    // Orca's "Committed Changes" is a branch comparison, not a list of commits
+    // pending push. Prefer the configured/default base branch (origin/main here)
+    // before falling back to the current branch's tracking ref.
     let upstream_oid = repo
-        .find_branch(branch_name, BranchType::Local)
+        .find_reference("refs/remotes/origin/main")
         .ok()
-        .and_then(|branch| branch.upstream().ok())
-        .and_then(|branch| branch.get().target())
-        .or_else(|| repo.find_reference("refs/remotes/origin/main").ok().and_then(|reference| reference.target()))
-        .or_else(|| repo.find_reference("refs/heads/main").ok().and_then(|reference| reference.target()));
+        .and_then(|reference| reference.target())
+        .or_else(|| repo.find_reference("refs/heads/main").ok().and_then(|reference| reference.target()))
+        .or_else(|| repo
+            .find_branch(branch_name, BranchType::Local)
+            .ok()
+            .and_then(|branch| branch.upstream().ok())
+            .and_then(|branch| branch.get().target()));
     let Some(upstream_oid) = upstream_oid else { return Ok(Vec::new()) };
     let base_oid = repo.merge_base(head_oid, upstream_oid).unwrap_or(upstream_oid);
     if base_oid == head_oid {
@@ -528,6 +584,8 @@ pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
     let base_tree = repo.find_commit(base_oid).and_then(|commit| commit.tree()).map_err(|e| e.to_string())?;
     let head_tree = repo.find_commit(head_oid).and_then(|commit| commit.tree()).map_err(|e| e.to_string())?;
     let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None).map_err(|e| e.to_string())?;
+    let base_revision = base_oid.to_string();
+    let committed_numstat = numstat(&["diff", "--numstat", &base_revision, "HEAD"]);
     let mut files = Vec::new();
     for delta in diff.deltas() {
         let status = match delta.status() {
@@ -538,7 +596,8 @@ pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
         };
         let path = delta.new_file().path().or_else(|| delta.old_file().path()).map(|path| path.to_string_lossy().to_string()).unwrap_or_default();
         if !path.is_empty() {
-            files.push(FileEntry { path, status: status.to_string() });
+            let (additions, deletions) = committed_numstat.get(&path).copied().unwrap_or((0, 0));
+            files.push(FileEntry { path, status: status.to_string(), additions, deletions });
         }
     }
     Ok(files)
@@ -615,6 +674,41 @@ pub fn git_push(branch: String) -> Result<String, String> {
     } else {
         Err(if stderr.is_empty() { stdout } else { stderr })
     }
+}
+
+fn run_git(args: &[&str]) -> Result<String, String> {
+    let output = std::process::Command::new("git")
+        .args(args)
+        .current_dir(repo_root())
+        .output()
+        .map_err(|e| e.to_string())?;
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    if output.status.success() {
+        Ok(format!("{stdout}{stderr}"))
+    } else {
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+#[tauri::command]
+pub fn git_fetch() -> Result<String, String> {
+    run_git(&["fetch", "origin"])
+}
+
+#[tauri::command]
+pub fn git_pull() -> Result<String, String> {
+    run_git(&["pull", "--ff-only"])
+}
+
+#[tauri::command]
+pub fn git_force_push(branch: String) -> Result<String, String> {
+    run_git(&["push", "--force-with-lease", "origin", &branch])
+}
+
+#[tauri::command]
+pub fn git_rebase_main() -> Result<String, String> {
+    run_git(&["rebase", "origin/main"])
 }
 
 #[tauri::command]

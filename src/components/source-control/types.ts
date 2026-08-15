@@ -3,10 +3,14 @@ export type FileStatus = "M" | "A" | "D" | "R" | "U";
 export interface FileEntry {
   path: string;
   status: FileStatus;
+  additions: number;
+  deletions: number;
 }
 
 export interface GitStatus {
   branch: string;
+  repoName: string;
+  repoPath: string;
   staged: FileEntry[];
   unstaged: FileEntry[];
 }

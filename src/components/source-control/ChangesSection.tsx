@@ -40,7 +40,7 @@ export default function ChangesSection({
         role="button"
         tabIndex={0}
         onClick={() => setCollapsed((c) => !c)}
-        className="group flex w-full items-center gap-1 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
+        className="group relative flex w-full items-center gap-1 px-3 pb-1 pt-2 text-[12px] font-semibold tracking-normal text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
       >
         {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
         <span className="flex-1 truncate">
@@ -49,11 +49,11 @@ export default function ChangesSection({
         <button
           type="button"
           onClick={(event) => { event.stopPropagation(); setCollapsed(false); }}
-          className="mr-1 shrink-0 normal-case text-[11px] font-medium tracking-normal text-vscode-fg-muted hover:text-vscode-fg"
+          className="w-16 shrink-0 text-right text-[12px] font-medium tracking-normal text-vscode-fg-muted hover:text-vscode-fg"
         >
           查看全部
         </button>
-        <span className={`flex shrink-0 items-center justify-end gap-0.5 opacity-0 pointer-events-none transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 ${variant === "unstaged" ? "w-11" : "w-5"}`}>
+        <span className={`absolute right-[76px] flex items-center justify-end gap-0.5 opacity-0 pointer-events-none transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 ${variant === "unstaged" ? "w-11" : "w-5"}`}>
           {(variant === "unstaged" || variant === "untracked") && (
             <>
               {variant === "unstaged" && <button type="button" title={t.git.discardAllChanges} onClick={(e) => { e.stopPropagation(); onDiscardAll?.(); }} className="rounded p-0.5 normal-case text-vscode-fg-muted hover:bg-vscode-list-active hover:text-vscode-fg"><IconUndo size={13} /></button>}

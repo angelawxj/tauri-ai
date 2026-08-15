@@ -59,6 +59,24 @@ export interface TranslationDict {
     committedChangesTitle: string;
     discardAllChanges: string;
     stageAllChanges: string;
+    publishBranch: string;
+    moreCommitActions: string;
+    filterFiles: string;
+    filterBranches: string;
+    forcePush: string;
+    commitAndPush: string;
+    fastForward: string;
+    pull: string;
+    sync: string;
+    rebaseMain: string;
+    fetch: string;
+    confirmForcePush: (branch: string) => string;
+    confirmRebaseMain: string;
+    showCommitChanges: string;
+    hideCommitChanges: string;
+    copyCommitHash: string;
+    copyCommitMessage: string;
+    copyCommitInfo: string;
     unstageAll: string;
     discardChanges: string;
     stageChanges: string;
@@ -159,6 +177,24 @@ const zh: TranslationDict = {
     committedChangesTitle: "已提交的更改",
     discardAllChanges: "丢弃全部更改",
     stageAllChanges: "暂存全部更改",
+    publishBranch: "发布分支",
+    moreCommitActions: "更多提交和远程操作",
+    filterFiles: "筛选文件…",
+    filterBranches: "筛选分支…",
+    forcePush: "强制推送",
+    commitAndPush: "提交并推送",
+    fastForward: "快速前进",
+    pull: "拉取",
+    sync: "同步",
+    rebaseMain: "变基到 origin/main",
+    fetch: "获取",
+    confirmForcePush: (branch) => `确定要强制推送分支「${branch}」吗？这可能覆盖远程提交。`,
+    confirmRebaseMain: "确定要将当前分支变基到 origin/main 吗？发生冲突时需要手动处理。",
+    showCommitChanges: "展开改动",
+    hideCommitChanges: "收起改动",
+    copyCommitHash: "复制提交哈希",
+    copyCommitMessage: "复制提交信息",
+    copyCommitInfo: "复制完整提交信息",
     unstageAll: "取消暂存全部",
     discardChanges: "丢弃更改",
     stageChanges: "暂存更改",
@@ -259,6 +295,24 @@ const en: TranslationDict = {
     committedChangesTitle: "Committed Changes",
     discardAllChanges: "Discard All Changes",
     stageAllChanges: "Stage All Changes",
+    publishBranch: "Publish Branch",
+    moreCommitActions: "More commit and remote actions",
+    filterFiles: "Filter files…",
+    filterBranches: "Filter branches…",
+    forcePush: "Force Push",
+    commitAndPush: "Commit & Push",
+    fastForward: "Fast-forward",
+    pull: "Pull",
+    sync: "Sync",
+    rebaseMain: "Rebase from origin/main",
+    fetch: "Fetch",
+    confirmForcePush: (branch) => `Force push branch "${branch}"? This can overwrite remote commits.`,
+    confirmRebaseMain: "Rebase the current branch onto origin/main? Conflicts may require manual resolution.",
+    showCommitChanges: "Show changes",
+    hideCommitChanges: "Hide changes",
+    copyCommitHash: "Copy commit hash",
+    copyCommitMessage: "Copy commit message",
+    copyCommitInfo: "Copy commit details",
     unstageAll: "Unstage All",
     discardChanges: "Discard Changes",
     stageChanges: "Stage Changes",

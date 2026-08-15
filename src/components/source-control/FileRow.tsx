@@ -6,7 +6,7 @@ import { useI18n } from "../../i18n";
 function splitPath(path: string): { dir: string; name: string } {
   const idx = path.lastIndexOf("/");
   if (idx === -1) return { dir: "", name: path };
-  return { dir: `${path.slice(0, idx)}/`, name: path.slice(idx + 1) };
+  return { dir: path.slice(0, idx), name: path.slice(idx + 1) };
 }
 
 interface FileRowProps {
@@ -32,6 +32,7 @@ export default function FileRow({
   const colorClass = STATUS_COLOR_CLASS[entry.status];
   const label = STATUS_LABELS[entry.status];
   const canOpenDiff = variant !== "readonly";
+  const hasLineStats = entry.additions > 0 || entry.deletions > 0;
 
   const handleClick = () => {
     if (!canOpenDiff) return;
@@ -55,10 +56,16 @@ export default function FileRow({
       </span>
 
       {variant === "readonly" ? (
-        <span className={`shrink-0 text-[11px] font-semibold ${colorClass}`}>{label}</span>
+        <span className="flex w-[108px] shrink-0 items-center justify-end gap-2 text-[11px] font-medium tabular-nums">
+          {hasLineStats && <><span className="text-git-added">+{entry.additions}</span>{entry.deletions > 0 && <span className="text-git-deleted">-{entry.deletions}</span>}</>}
+          <span className={`font-semibold ${colorClass}`}>{label}</span>
+        </span>
       ) : (
-        <span className="relative flex h-5 w-10 shrink-0 items-center justify-end">
-          <span className={`absolute right-0 text-[11px] font-semibold transition-opacity group-hover:opacity-0 ${colorClass}`}>{label}</span>
+        <span className="relative flex h-5 w-[108px] shrink-0 items-center justify-end">
+          <span className="flex items-center gap-2 text-[11px] font-medium tabular-nums transition-opacity group-hover:opacity-0">
+            {hasLineStats && <><span className="text-git-added">+{entry.additions}</span>{entry.deletions > 0 && <span className="text-git-deleted">-{entry.deletions}</span>}</>}
+            <span className={`font-semibold ${colorClass}`}>{label}</span>
+          </span>
           <span className="absolute right-0 flex items-center gap-0.5 opacity-0 pointer-events-none transition-opacity group-hover:pointer-events-auto group-hover:opacity-100">
             {(variant === "unstaged" || variant === "untracked") && (
               <>

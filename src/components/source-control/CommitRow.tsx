@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { IconChevronDown, IconChevronRight, IconCommitFile } from "../icons";
 import type { GraphRow } from "./commit-graph";
 import type { CommitInfo, FileEntry } from "./types";
@@ -48,15 +49,33 @@ function refClass(name: string, isHead: boolean): string {
 
 export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded, onToggle, files, filesLoading, onOpenFile }: CommitRowProps) {
   const { lang, t } = useI18n();
+  const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const subject = commit.message.split("\n")[0];
   const visibleRefs = commit.refs.slice(0, MAX_VISIBLE_REFS);
   const hiddenRefCount = commit.refs.length - visibleRefs.length;
+  const copy = async (value: string) => {
+    try {
+      await navigator.clipboard.writeText(value);
+    } catch {
+      window.prompt(t.git.copyCommitInfo, value);
+    }
+    setMenu(null);
+  };
+
+  useEffect(() => {
+    if (!menu) return;
+    const dismiss = () => setMenu(null);
+    window.addEventListener("pointerdown", dismiss);
+    window.addEventListener("keydown", dismiss);
+    return () => { window.removeEventListener("pointerdown", dismiss); window.removeEventListener("keydown", dismiss); };
+  }, [menu]);
 
   return (
     <div>
       <button
         type="button"
         onClick={onToggle}
+        onContextMenu={(event) => { event.preventDefault(); setMenu({ x: event.clientX, y: event.clientY }); }}
         aria-expanded={expanded}
         className="grid min-h-[26px] w-full min-w-0 grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-1.5 px-3 py-0.5 text-left text-xs transition-colors hover:bg-vscode-list-hover"
         style={{ height: ROW_HEIGHT }}
@@ -73,6 +92,11 @@ export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded
           </span>
         )}
       </button>
+
+      {menu && <div role="menu" className="fixed z-50 min-w-48 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-lg" style={{ left: menu.x, top: menu.y }} onPointerDown={(event) => event.stopPropagation()}>
+        <button type="button" onClick={() => void copy(commit.hash)} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.copyCommitHash}</button>
+        <button type="button" onClick={() => void copy(commit.message)} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.copyCommitMessage}</button>
+      </div>}
 
       {expanded && (
         <div className="border-l border-vscode-border bg-vscode-list-hover/30">
