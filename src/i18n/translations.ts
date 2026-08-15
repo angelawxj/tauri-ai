@@ -186,8 +186,9 @@ const zh: TranslationDict = {
     browserPreviewNotice:
       "无法连接本地 Git 后端。当前处于浏览器预览模式，请在 Tauri 应用窗口中打开以启用真实的 Git 操作。",
     noChangesDetected: "没有检测到更改",
-    noChangesHeading: "此分支没有更改",
-    noChangesSupportingText: (baseRef) => `工作区是干净的，此分支相对于 ${baseRef} 没有超前的提交`,
+    // Orca keeps these Source Control empty-state strings in English.
+    noChangesHeading: "No changes on this branch",
+    noChangesSupportingText: (baseRef) => `This workspace is clean and this branch has no changes ahead of ${baseRef}`,
     baseRefFallback: "基准分支",
     stagedChangesTitle: "暂存的更改",
     changesTitle: "更改",

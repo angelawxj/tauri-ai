@@ -58,7 +58,9 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     try {
       const context = await api.historyContext();
       setHasOutgoingChanges(context.hasOutgoingChanges);
-      setBaseRefName(context.baseRef?.name);
+      // When HEAD already equals its upstream there is no merge-base lane, but
+      // Orca still names that upstream in the clean-branch empty state.
+      setBaseRefName(context.baseRef?.name ?? context.remoteRef?.name);
     } catch {
       setHasOutgoingChanges(false);
       setBaseRefName(undefined);
