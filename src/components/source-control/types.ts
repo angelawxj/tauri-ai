@@ -1,4 +1,4 @@
-export type FileStatus = "M" | "A" | "D" | "R" | "U";
+export type FileStatus = "M" | "A" | "D" | "R" | "U" | "C";
 
 export interface FileEntry {
   path: string;

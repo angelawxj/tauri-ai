@@ -185,6 +185,16 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
             _ => continue,
         };
 
+        if s.is_conflicted() {
+            unstaged.push(FileEntry {
+                path,
+                status: "C".to_string(),
+                additions: 0,
+                deletions: 0,
+            });
+            continue;
+        }
+
         if let Some(st) = status_char(s, true) {
             let (additions, deletions) = staged_numstat.get(&path).copied().unwrap_or((0, 0));
             staged.push(FileEntry {
