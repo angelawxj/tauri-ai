@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { IconRefresh, IconSearch, IconUpload, IconX } from "../icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
@@ -22,7 +22,6 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [historyTick, setHistoryTick] = useState(0);
   const [pushing, setPushing] = useState(false);
-  const [hasUpstream, setHasUpstream] = useState<boolean | null>(null);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
 
@@ -43,13 +42,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
 
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
   const canStageAll = !unavailable && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
-  const canPublish = !unavailable && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && hasUpstream === false;
-
-  useEffect(() => {
-    let cancelled = false;
-    api.historyContext().then((context) => { if (!cancelled) setHasUpstream(Boolean(context.remoteRef)); }).catch(() => { if (!cancelled) setHasUpstream(null); });
-    return () => { cancelled = true; };
-  }, [status?.branch]);
+  const canPushIdle = !unavailable && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
 
   const withErrorHandling = async (fn: () => Promise<void>) => {
     setActionMessage(null);
@@ -154,18 +147,18 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           onCommit={() => {
             if (canStageAll) {
               void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
-            } else if (canPublish) {
+            } else if (canPushIdle) {
               void handlePush();
             } else {
               void handleCommit();
             }
           }}
-          canCommit={canCommit || canStageAll || canPublish}
-          disabledReason={canStageAll || canPublish ? "" : disabledReason}
+          canCommit={canCommit || canStageAll || canPushIdle}
+          disabledReason={canStageAll || canPushIdle ? "" : disabledReason}
           committing={committing}
-          actionLabel={canPublish ? t.git.publishBranch : canStageAll ? t.git.stageAllChanges : undefined}
-          actionTitle={canPublish ? t.git.publishBranch : canStageAll ? t.git.stageAllChanges : undefined}
-          actionKind={canPublish ? "publish" : canStageAll ? "stage" : "commit"}
+          actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllChanges : undefined}
+          actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
+          actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
           onPush={() => void handlePush()}
           canPush={!unavailable && Boolean(status?.branch)}
           onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}

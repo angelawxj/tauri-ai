@@ -100,6 +100,7 @@ export interface TranslationDict {
     changesToPath: (path: string) => string;
     allUnstagedChanges: string;
     push: string;
+    pushShort: string;
     switchingBranch: string;
     noLocalBranches: string;
     loadBranchesFailed: string;
@@ -218,6 +219,7 @@ const zh: TranslationDict = {
     changesToPath: (path) => `「${path}」的更改`,
     allUnstagedChanges: "全部未暂存的更改",
     push: "推送到 origin",
+    pushShort: "推",
     switchingBranch: "切换中…",
     noLocalBranches: "没有本地分支",
     loadBranchesFailed: "加载分支列表失败",
@@ -336,6 +338,7 @@ const en: TranslationDict = {
     changesToPath: (path) => `the changes to "${path}"`,
     allUnstagedChanges: "all unstaged changes",
     push: "Push to origin",
+    pushShort: "Push",
     switchingBranch: "Switching…",
     noLocalBranches: "No local branches",
     loadBranchesFailed: "Failed to load branches",
