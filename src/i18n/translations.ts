@@ -58,6 +58,9 @@ export interface TranslationDict {
     actionFailed: string;
     browserPreviewNotice: string;
     noChangesDetected: string;
+    noChangesHeading: string;
+    noChangesSupportingText: (baseRef: string) => string;
+    baseRefFallback: string;
     stagedChangesTitle: string;
     changesTitle: string;
     untrackedFilesTitle: string;
@@ -182,6 +185,9 @@ const zh: TranslationDict = {
     browserPreviewNotice:
       "无法连接本地 Git 后端。当前处于浏览器预览模式，请在 Tauri 应用窗口中打开以启用真实的 Git 操作。",
     noChangesDetected: "没有检测到更改",
+    noChangesHeading: "此分支没有更改",
+    noChangesSupportingText: (baseRef) => `工作区是干净的，此分支相对于 ${baseRef} 没有超前的提交`,
+    baseRefFallback: "基准分支",
     stagedChangesTitle: "暂存的更改",
     changesTitle: "更改",
     untrackedFilesTitle: "未跟踪文件",
@@ -306,6 +312,9 @@ const en: TranslationDict = {
     browserPreviewNotice:
       "Cannot connect to the local Git backend. Currently in browser preview mode — open this app inside the Tauri window to enable real Git operations.",
     noChangesDetected: "No changes detected",
+    noChangesHeading: "No changes on this branch",
+    noChangesSupportingText: (baseRef) => `This workspace is clean and this branch has no changes ahead of ${baseRef}`,
+    baseRefFallback: "base",
     stagedChangesTitle: "Staged Changes",
     changesTitle: "Changes",
     untrackedFilesTitle: "Untracked Files",

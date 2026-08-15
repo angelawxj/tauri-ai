@@ -1,25 +1,17 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { IconChevronDown, IconChevronRight } from "../icons";
-import { api } from "./api";
 import FileRow from "./FileRow";
 import type { FileEntry } from "./types";
 
 interface CommittedChangesSectionProps {
   title: string;
-  refreshSignal: number;
+  files: FileEntry[];
   filterQuery?: string;
 }
 
 /** Orca's branch-relative committed-file section; distinct from commit history. */
-export default function CommittedChangesSection({ title, refreshSignal, filterQuery = "" }: CommittedChangesSectionProps) {
+export default function CommittedChangesSection({ title, files, filterQuery = "" }: CommittedChangesSectionProps) {
   const [collapsed, setCollapsed] = useState(true);
-  const [files, setFiles] = useState<FileEntry[]>([]);
-
-  useEffect(() => {
-    let cancelled = false;
-    api.committedFiles().then((entries) => { if (!cancelled) setFiles(entries); }).catch(() => { if (!cancelled) setFiles([]); });
-    return () => { cancelled = true; };
-  }, [refreshSignal]);
 
   const visibleFiles = files.filter((file) => file.path.toLocaleLowerCase().includes(filterQuery.toLocaleLowerCase()));
   if (files.length === 0 || (filterQuery && visibleFiles.length === 0)) return null;

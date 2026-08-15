@@ -8,6 +8,7 @@ import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
 import HistoryPanel from "./HistoryPanel";
 import CommittedChangesSection from "./CommittedChangesSection";
+import type { FileEntry } from "./types";
 
 interface SourceControlProps {
   onOpenDiff?: (path: string, staged: boolean, commitHash?: string) => void;
@@ -25,6 +26,8 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
   const [hasOutgoingChanges, setHasOutgoingChanges] = useState(false);
+  const [baseRefName, setBaseRefName] = useState<string | undefined>(undefined);
+  const [committedFiles, setCommittedFiles] = useState<FileEntry[]>([]);
 
   const staged = status?.staged ?? [];
   const conflicts = (status?.unstaged ?? []).filter((entry) => entry.status === "C");
@@ -51,14 +54,22 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     try {
       const context = await api.historyContext();
       setHasOutgoingChanges(context.hasOutgoingChanges);
+      setBaseRefName(context.baseRef?.name);
     } catch {
       setHasOutgoingChanges(false);
+      setBaseRefName(undefined);
     }
   };
 
   useEffect(() => {
     void refreshOutgoingStatus();
   }, [status?.branch]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.committedFiles().then((entries) => { if (!cancelled) setCommittedFiles(entries); }).catch(() => { if (!cancelled) setCommittedFiles([]); });
+    return () => { cancelled = true; };
+  }, [historyTick, status?.branch]);
 
   useEffect(() => {
     if (!actionMessage) return;
@@ -235,8 +246,11 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
-        {!unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && (
-          <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">{t.git.noChangesDetected}</div>
+        {!unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && committedFiles.length === 0 && (
+          <div className="px-4 py-6">
+            <div className="text-[13px] font-medium text-vscode-fg">{t.git.noChangesHeading}</div>
+            <div className="mt-1 text-[12px] text-vscode-fg-dim">{t.git.noChangesSupportingText(baseRefName ?? t.git.baseRefFallback)}</div>
+          </div>
         )}
 
         {!unavailable && !error && (
@@ -307,7 +321,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
               onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
               onOpenDiff={onOpenDiff}
             />
-            <CommittedChangesSection title={t.git.committedChangesTitle} refreshSignal={historyTick} filterQuery={filterQuery} />
+            <CommittedChangesSection title={t.git.committedChangesTitle} files={committedFiles} filterQuery={filterQuery} />
           </>
         )}
       </div>
