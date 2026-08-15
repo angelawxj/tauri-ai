@@ -131,6 +131,7 @@ export default function HistorySection({ refreshSignal }: HistorySectionProps) {
                 commit={commit}
                 graphRow={graphRows[i]}
                 maxLanes={maxLanes}
+                isHead={i === 0}
                 expanded={expanded.has(commit.hash)}
                 onToggle={() => toggle(commit.hash)}
                 files={fileCache[commit.hash]}

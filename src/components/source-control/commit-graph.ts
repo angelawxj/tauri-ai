@@ -1,120 +1,74 @@
 import type { CommitInfo } from "./types";
 
-/** swimlane 分支线颜色循环 */
-export const GRAPH_LANE_COLORS = [
-  "#3794ff",
-  "#e2a336",
-  "#73c991",
-  "#c586c0",
-  "#f14c4c",
-  "#4ec9b0",
-  "#dcdcaa",
-] as const;
+// Orca's graph palette: current ref, base ref, remote ref, then unlabelled lanes.
+export const GRAPH_LANE_COLORS = ["#007acc", "#ea5c00", "#b66dff", "#ffb000", "#dc267f", "#40b0a6", "#ce9178"] as const;
 
-export interface GraphDot {
-  lane: number;
-  colorIndex: number;
-  /** false when this lane has no line coming in from the row above (new branch tip) */
-  hasIncoming: boolean;
-}
-
-export interface GraphPassLine {
-  lane: number;
-  colorIndex: number;
-}
-
-export interface GraphEdge {
-  fromLane: number;
-  toLane: number;
+export interface GraphNode {
+  id: string;
   colorIndex: number;
 }
 
 export interface GraphRow {
-  dot: GraphDot;
-  /** lanes that only pass straight through this row (no dot), drawn as vertical lines */
-  passThrough: GraphPassLine[];
-  /** edges drawn from this row's dot down to the next row (parent lane(s), incl. merges) */
-  edgesToNext: GraphEdge[];
-  /** total lane columns alive after this row, used to size the SVG grid width */
+  inputSwimlanes: GraphNode[];
+  outputSwimlanes: GraphNode[];
+  commitHash: string;
+  parents: string[];
+  parentCount: number;
   laneCount: number;
 }
 
-/**
- * 由提交列表（新→旧，含 parents，parent 顺序在前的一定先出现）计算 swimlane 布局。
- * 维护一组"活跃 lane"，每个 lane 记录它正等待出现的父 commit hash；
- * 遇到该 hash 时把提交放进对应 lane，多个 lane 同时等待同一 hash 即为合并提交的汇入点。
- */
-export function computeSwimlanes(commits: CommitInfo[]): GraphRow[] {
-  const lanes: (string | null)[] = [];
-  const laneColors: number[] = [];
-  let colorSeq = 0;
+function cloneNode(node: GraphNode): GraphNode {
+  return { ...node };
+}
+
+/** Port of Orca's input/output swimlane model. */
+function refColor(commit: CommitInfo, currentBranch?: string): number | undefined {
+  if (currentBranch && commit.refs.includes(currentBranch)) return 0;
+  if (commit.refs.some((ref) => ref.endsWith("/main"))) return 1;
+  if (currentBranch && commit.refs.includes(`origin/${currentBranch}`)) return 2;
+  return undefined;
+}
+
+export function computeSwimlanes(commits: CommitInfo[], currentBranch?: string): GraphRow[] {
   const rows: GraphRow[] = [];
-
-  const nextColor = () => {
-    const c = colorSeq % GRAPH_LANE_COLORS.length;
-    colorSeq += 1;
-    return c;
-  };
-
-  const claimLane = (): number => {
-    const free = lanes.findIndex((h) => h === null);
-    if (free !== -1) return free;
-    lanes.push(null);
-    laneColors.push(0);
-    return lanes.length - 1;
-  };
+  let colorSequence = -1;
 
   for (const commit of commits) {
-    let lane = lanes.findIndex((h) => h === commit.hash);
-    let hasIncoming = true;
-    if (lane === -1) {
-      lane = claimLane();
-      laneColors[lane] = nextColor();
-      hasIncoming = false;
-    }
-    const colorIndex = laneColors[lane];
+    const inputSwimlanes = (rows[rows.length - 1]?.outputSwimlanes ?? []).map(cloneNode);
+    const outputSwimlanes: GraphNode[] = [];
+    let firstParentAdded = false;
 
-    // 其它同样在等待这个 hash 的 lane：说明它们的子提交把这个 commit 当作另一个 parent（合并提交在此汇入）
-    const mergingLanes: number[] = [];
-    lanes.forEach((h, i) => {
-      if (i !== lane && h === commit.hash) mergingLanes.push(i);
-    });
-
-    const passThrough: GraphPassLine[] = [];
-    lanes.forEach((h, i) => {
-      if (i === lane || mergingLanes.includes(i) || h === null) return;
-      passThrough.push({ lane: i, colorIndex: laneColors[i] });
-    });
-
-    mergingLanes.forEach((i) => {
-      lanes[i] = null;
-    });
-
-    const edgesToNext: GraphEdge[] = [];
-    const parents = commit.parents;
-    if (parents.length === 0) {
-      lanes[lane] = null;
-    } else {
-      lanes[lane] = parents[0];
-      edgesToNext.push({ fromLane: lane, toLane: lane, colorIndex });
-
-      for (let i = 1; i < parents.length; i += 1) {
-        const parentHash = parents[i];
-        let mergeLane = lanes.findIndex((h) => h === parentHash);
-        if (mergeLane === -1) {
-          mergeLane = claimLane();
-          lanes[mergeLane] = parentHash;
-          laneColors[mergeLane] = nextColor();
+    if (commit.parents.length > 0) {
+      for (const node of inputSwimlanes) {
+        if (node.id === commit.hash) {
+          if (!firstParentAdded) {
+            outputSwimlanes.push({ id: commit.parents[0], colorIndex: refColor(commit, currentBranch) ?? node.colorIndex });
+            firstParentAdded = true;
+          }
+          continue;
         }
-        edgesToNext.push({ fromLane: lane, toLane: mergeLane, colorIndex: laneColors[mergeLane] });
+        outputSwimlanes.push(cloneNode(node));
+      }
+    }
+
+    for (let parentIndex = firstParentAdded ? 1 : 0; parentIndex < commit.parents.length; parentIndex += 1) {
+      const parentCommit = commits.find((candidate) => candidate.hash === commit.parents[parentIndex]);
+      const labeledColor = parentIndex === 0 ? refColor(commit, currentBranch) : parentCommit && refColor(parentCommit, currentBranch);
+      if (labeledColor !== undefined) {
+        outputSwimlanes.push({ id: commit.parents[parentIndex], colorIndex: labeledColor });
+      } else {
+        colorSequence = (colorSequence + 1) % (GRAPH_LANE_COLORS.length - 3);
+        outputSwimlanes.push({ id: commit.parents[parentIndex], colorIndex: colorSequence + 3 });
       }
     }
 
     rows.push({
-      dot: { lane, colorIndex, hasIncoming },
-      passThrough,
-      edgesToNext,
-      laneCount: lanes.length,
+      inputSwimlanes,
+      outputSwimlanes,
+      commitHash: commit.hash,
+      parents: commit.parents,
+      parentCount: commit.parents.length,
+      laneCount: Math.max(inputSwimlanes.length, outputSwimlanes.length, 1),
     });
   }
 

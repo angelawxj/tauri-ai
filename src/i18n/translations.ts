@@ -163,7 +163,7 @@ const zh: TranslationDict = {
     commitTitle: "提交 (Ctrl+Enter)",
     committing: "提交中…",
     commit: "提交",
-    commitHistoryTitle: "提交历史",
+    commitHistoryTitle: "提交",
     loadingCommitFiles: "加载改动文件…",
     noFileChangesInCommit: "此提交没有文件改动",
     noCommitsYet: "暂无提交记录",

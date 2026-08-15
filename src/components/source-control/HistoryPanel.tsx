@@ -7,7 +7,6 @@ import { useI18n } from "../../i18n";
 import CommitRow from "./CommitRow";
 
 const MIN_HEIGHT = 120;
-const HEADER_HEIGHT = 26;
 const DEFAULT_HEIGHT = 240;
 const RESIZE_STEP = 16;
 
@@ -18,11 +17,10 @@ function maxHeight(): number {
 interface HistoryPanelProps {
   /** bump to force a re-fetch (e.g. right after a commit) */
   refreshSignal: number;
-  /** current branch name (from git status), used to find the HEAD commit for graph styling */
-  headBranchName: string | null;
+  currentBranch?: string;
 }
 
-export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryPanelProps) {
+export default function HistoryPanel({ refreshSignal, currentBranch }: HistoryPanelProps) {
   const { t } = useI18n();
   const { commits, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
     useGitHistory(refreshSignal);
@@ -30,9 +28,8 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const dragState = useRef<{ startY: number; startHeight: number } | null>(null);
 
-  const graphRows = computeSwimlanes(commits);
+  const graphRows = computeSwimlanes(commits, currentBranch);
   const laneCount = Math.max(1, ...graphRows.map((r) => r.laneCount));
-  const headHash = headBranchName ? commits.find((c) => c.refs.includes(headBranchName))?.hash : undefined;
 
   const onDragStart = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -86,28 +83,31 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
         />
       )}
 
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => setCollapsed((c) => !c)}
-        className="group flex shrink-0 items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-vscode-fg-muted hover:bg-vscode-list-hover"
-        style={{ height: HEADER_HEIGHT }}
-      >
-        {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
-        <span className="flex-1 truncate">
-          {t.git.commitHistoryTitle} {commits.length > 0 && <span className="text-vscode-fg-dim">({commits.length})</span>}
-        </span>
+      <div className="h-7 shrink-0 pl-1 pr-3">
+        <div className="flex h-full items-stretch">
+          <button
+            type="button"
+            onClick={() => setCollapsed((c) => !c)}
+            className="flex min-w-0 flex-1 items-center gap-1 px-0.5 text-left text-[11px] font-semibold tracking-wide text-vscode-fg-muted"
+          >
+            {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
+            <span className="truncate">{t.git.commitHistoryTitle}</span>
+            {commits.length > 0 && <span className="text-[10px] font-medium tabular-nums">{commits.length}</span>}
+          </button>
+          <span title="What are refs?" className="my-auto flex h-4 w-4 items-center justify-center rounded-full border border-vscode-fg-dim text-[10px] text-vscode-fg-muted">?</span>
         <button
           type="button"
           title={t.common.refresh}
           onClick={(e) => {
             e.stopPropagation();
-            void refresh();
+            if (collapsed) setCollapsed(false);
+            else void refresh();
           }}
-          className="hidden rounded p-0.5 normal-case text-vscode-fg-muted hover:bg-vscode-list-active hover:text-vscode-fg group-hover:flex"
+          className="my-auto ml-1 rounded p-0.5 text-vscode-fg-muted hover:text-vscode-fg"
         >
           <IconRefresh size={12} />
         </button>
+        </div>
       </div>
 
       {!collapsed && (
@@ -128,7 +128,7 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
                 commit={commit}
                 graphRow={graphRows[i]}
                 maxLanes={laneCount}
-                isHead={commit.hash === headHash}
+                isHead={i === 0}
                 expanded={expanded.has(commit.hash)}
                 onToggle={() => toggleExpanded(commit.hash)}
                 files={filesFor(commit.hash)}

@@ -253,8 +253,12 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
     for r in refs {
         let r = r.map_err(|e| e.to_string())?;
         let name = r.name().unwrap_or("").to_string();
+        if name.starts_with("refs/remotes/") && name.ends_with("/HEAD") {
+            continue;
+        }
         let short = name
             .strip_prefix("refs/heads/")
+            .or_else(|| name.strip_prefix("refs/remotes/"))
             .or_else(|| name.strip_prefix("refs/tags/"))
             .map(|s| s.to_string());
         if let Some(short_name) = short {
