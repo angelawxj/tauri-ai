@@ -31,8 +31,11 @@ function cloneNode(node: GraphNode): GraphNode {
 }
 
 function resolveBaseCommitHash(commits: CommitInfo[], context?: GitHistoryContext): string | undefined {
-  if (context?.baseRef?.revision) return context.baseRef.revision;
-  if (context?.mergeBase) return context.mergeBase;
+  // With history context available, only an explicitly resolved base branch
+  // owns the base lane.  The merge base can instead be the upstream tip (for
+  // example dev...origin/dev); coloring it as a base made Orca's purple remote
+  // lane incorrectly turn orange.
+  if (context) return context.baseRef?.revision;
 
   // Orca persists the selected base branch ("dev" in the inspected worktree).
   // Our lightweight backend has no branch-base selector yet, so use the first
@@ -50,13 +53,13 @@ function commitColor(
   // The backend deliberately sends display names in CommitInfo.refs. Do not infer
   // a ref namespace from '/', because local branch names such as codex/foo also
   // contain it. Orca matches the resolved current/upstream references instead.
-  if (context?.currentRef && commit.refs.includes(context.currentRef.name)) return CURRENT_REF_COLOR;
-  if (context?.baseRef && commit.refs.includes(context.baseRef.name)) return BASE_REF_COLOR;
+  if (commit.hash === context?.currentRef?.revision || (context?.currentRef && commit.refs.includes(context.currentRef.name))) return CURRENT_REF_COLOR;
+  if (commit.hash === context?.remoteRef?.revision || (context?.remoteRef && commit.refs.includes(context.remoteRef.name))) return REMOTE_REF_COLOR;
+  if (context?.baseRef && (commit.hash === context.baseRef.revision || commit.refs.includes(context.baseRef.name))) return BASE_REF_COLOR;
   // Orca switches to the base-ref lane at the merge base.  Without this
   // boundary the current branch's blue lane incorrectly continues through
   // the shared history, making the lower history graph monochrome.
   if (baseCommitHash === commit.hash) return BASE_REF_COLOR;
-  if (context?.remoteRef && commit.refs.includes(context.remoteRef.name)) return REMOTE_REF_COLOR;
   return undefined;
 }
 

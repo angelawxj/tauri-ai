@@ -660,6 +660,13 @@ pub fn git_committed_files(state: State<RepoState>) -> Result<Vec<FileEntry>, St
         None => return Ok(Vec::new()),
     };
     let branch_name = head.shorthand().unwrap_or("");
+    // `dev`/`main` are the repository's integration bases in this application.
+    // Orca's "Committed on Branch" compares a feature branch to its target; it
+    // does not turn ordinary commits made directly on the target branch into a
+    // file list merely because they have not been pushed yet.
+    if matches!(branch_name, "dev" | "main" | "master") {
+        return Ok(Vec::new());
+    }
     // Orca's "Committed Changes" is a branch comparison, not a list of commits
     // pending push. The current branch's upstream is the primary comparison
     // target; using origin/main first incorrectly shows old dev history after
