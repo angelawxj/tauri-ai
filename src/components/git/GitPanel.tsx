@@ -2,11 +2,13 @@ import { useMemo, useState } from "react";
 import { IconGitBranch, IconRefresh } from "../icons";
 import { gitApi } from "./api";
 import { useGitStatus } from "./useGitStatus";
+import { useI18n } from "../../i18n";
 import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
 import HistorySection from "./HistorySection";
 
 export default function GitPanel() {
+  const { t } = useI18n();
   const { status, loading, error, unavailable, refresh } = useGitStatus();
   const [message, setMessage] = useState("");
   const [committing, setCommitting] = useState(false);
@@ -18,11 +20,11 @@ export default function GitPanel() {
   const unstaged = status?.unstaged ?? [];
 
   const disabledReason = useMemo(() => {
-    if (unavailable) return "未连接 Git 后端";
-    if (!message.trim()) return "请输入提交信息";
-    if (staged.length === 0) return "没有已暂存的更改";
+    if (unavailable) return t.git.notConnected;
+    if (!message.trim()) return t.git.enterCommitMessage;
+    if (staged.length === 0) return t.git.noStagedChanges;
     return "";
-  }, [unavailable, message, staged.length]);
+  }, [unavailable, message, staged.length, t]);
 
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
 
@@ -31,7 +33,7 @@ export default function GitPanel() {
       await fn();
       setActionError(null);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : "操作失败");
+      setActionError(err instanceof Error ? err.message : t.git.actionFailed);
     }
   };
 
@@ -47,7 +49,7 @@ export default function GitPanel() {
     setCommitting(false);
   };
 
-  const confirmDiscard = (what: string) => window.confirm(`确定要丢弃${what}吗？此操作无法撤销。`);
+  const confirmDiscard = (what: string) => window.confirm(t.git.confirmDiscard(what));
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
@@ -58,7 +60,7 @@ export default function GitPanel() {
         </span>
         <button
           type="button"
-          title="刷新"
+          title={t.common.refresh}
           onClick={() => void refresh()}
           className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
         >
@@ -78,7 +80,7 @@ export default function GitPanel() {
 
         {unavailable && (
           <div className="px-3 py-3 text-[12px] leading-relaxed text-vscode-fg-dim">
-            无法连接本地 Git 后端。当前处于浏览器预览模式，请在 Tauri 应用窗口中打开以启用真实的 Git 操作。
+            {t.git.browserPreviewNotice}
           </div>
         )}
 
@@ -91,13 +93,13 @@ export default function GitPanel() {
         )}
 
         {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && (
-          <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">没有检测到更改</div>
+          <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">{t.git.noChangesDetected}</div>
         )}
 
         {!unavailable && !error && (
           <>
             <ChangesSection
-              title="暂存的更改"
+              title={t.git.stagedChangesTitle}
               entries={staged}
               variant="staged"
               selectedPath={selectedPath}
@@ -112,7 +114,7 @@ export default function GitPanel() {
               })}
             />
             <ChangesSection
-              title="更改"
+              title={t.git.changesTitle}
               entries={unstaged}
               variant="unstaged"
               selectedPath={selectedPath}
@@ -126,14 +128,14 @@ export default function GitPanel() {
                 await refresh();
               })}
               onDiscard={(path) => {
-                if (!confirmDiscard(`「${path}」的更改`)) return;
+                if (!confirmDiscard(t.git.changesToPath(path))) return;
                 void withErrorHandling(async () => {
                   await gitApi.discard(path);
                   await refresh();
                 });
               }}
               onDiscardAll={() => {
-                if (!confirmDiscard("全部未暂存的更改")) return;
+                if (!confirmDiscard(t.git.allUnstagedChanges)) return;
                 void withErrorHandling(async () => {
                   await Promise.all(unstaged.map((f) => gitApi.discard(f.path)));
                   await refresh();

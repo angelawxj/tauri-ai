@@ -1,5 +1,6 @@
 import { IconFile, IconMinus, IconPlus, IconUndo } from "../icons";
 import type { FileEntry, FileStatus } from "./types";
+import { useI18n } from "../../i18n";
 
 const STATUS_META: Record<FileStatus, { label: string; color: string }> = {
   M: { label: "M", color: "text-git-modified" },
@@ -35,6 +36,7 @@ export default function FileRow({
   onUnstage,
   onDiscard,
 }: FileRowProps) {
+  const { t } = useI18n();
   const { dir, name } = splitPath(entry.path);
   const meta = STATUS_META[entry.status];
 
@@ -66,7 +68,7 @@ export default function FileRow({
               <>
                 <button
                   type="button"
-                  title="丢弃更改"
+                  title={t.git.discardChanges}
                   onClick={(e) => {
                     e.stopPropagation();
                     onDiscard?.(entry.path);
@@ -77,7 +79,7 @@ export default function FileRow({
                 </button>
                 <button
                   type="button"
-                  title="暂存更改"
+                  title={t.git.stageChanges}
                   onClick={(e) => {
                     e.stopPropagation();
                     onStage?.(entry.path);
@@ -91,7 +93,7 @@ export default function FileRow({
             {variant === "staged" && (
               <button
                 type="button"
-                title="取消暂存"
+                title={t.git.unstage}
                 onClick={(e) => {
                   e.stopPropagation();
                   onUnstage?.(entry.path);

@@ -3,17 +3,11 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import TabBar, { type TabDef } from "./TabBar";
 import { GitPanel } from "../git";
 import { SourceControl } from "../source-control";
+import { useI18n } from "../../i18n";
 
 interface DetailPanelProps {
   onOpenDiff?: (path: string, staged: boolean) => void;
 }
-
-const TABS: TabDef[] = [
-  { id: "git", label: "Git 管理" },
-  { id: "source-control", label: "Source Control" },
-  { id: "files", label: "文件", disabled: true },
-  { id: "terminal", label: "终端", disabled: true },
-];
 
 const WIDTH_STORAGE_KEY = "detailPanelWidth";
 const DEFAULT_WIDTH = 380;
@@ -27,9 +21,17 @@ function readStoredWidth(): number {
 }
 
 export default function DetailPanel({ onOpenDiff }: DetailPanelProps) {
+  const { t } = useI18n();
   const [activeId, setActiveId] = useState("git");
   const [width, setWidth] = useState(readStoredWidth);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
+
+  const TABS: TabDef[] = [
+    { id: "git", label: t.tabs.git },
+    { id: "source-control", label: t.tabs.sourceControl },
+    { id: "files", label: t.tabs.files, disabled: true },
+    { id: "terminal", label: t.tabs.terminal, disabled: true },
+  ];
 
   useEffect(() => {
     localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
@@ -62,7 +64,7 @@ export default function DetailPanel({ onOpenDiff }: DetailPanelProps) {
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整右侧面板宽度"
+        aria-label={t.detailPanel.resizePanel}
         tabIndex={0}
         onPointerDown={onDragStart}
         className="h-full w-[3px] shrink-0 cursor-col-resize bg-transparent hover:bg-vscode-accent focus:bg-vscode-accent focus:outline-none"

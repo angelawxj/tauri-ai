@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { IconX } from "../icons";
 import { api, isApiUnavailable } from "./api";
+import { useI18n } from "../../i18n";
 import DiffView from "./DiffView";
 
 interface DiffTabProps {
@@ -10,6 +11,7 @@ interface DiffTabProps {
 }
 
 export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
+  const { t } = useI18n();
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -27,7 +29,7 @@ export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
       })
       .catch((err) => {
         if (cancelled || isApiUnavailable(err)) return;
-        setError(err instanceof Error ? err.message : "加载 diff 失败");
+        setError(err instanceof Error ? err.message : t.git.loadDiffFailed);
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -42,12 +44,12 @@ export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border px-3">
         <span className="min-w-0 truncate text-[12px] text-vscode-fg-muted" title={path}>
-          {path} <span className="text-vscode-fg-dim">· {staged ? "已暂存" : "未暂存"}</span>
+          {path} <span className="text-vscode-fg-dim">· {staged ? t.git.staged : t.git.unstaged}</span>
         </span>
         <button
           type="button"
           onClick={onClose}
-          title="关闭"
+          title={t.common.close}
           className="shrink-0 rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
         >
           <IconX size={13} />

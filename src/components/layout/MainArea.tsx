@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { IconX } from "../icons";
 import { DiffTab, type OpenDiffRequest } from "../source-control";
+import { useI18n } from "../../i18n";
 import ChatArea from "./ChatArea";
 
 interface MainAreaProps {
@@ -9,6 +10,7 @@ interface MainAreaProps {
 }
 
 export default function MainArea({ openDiff, onCloseDiff }: MainAreaProps) {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<"chat" | "diff">("chat");
 
   // Source Control 里点新文件时，自动切到 diff 标签页
@@ -33,7 +35,7 @@ export default function MainArea({ openDiff, onCloseDiff }: MainAreaProps) {
             activeTab === "chat" ? "text-vscode-fg" : "text-vscode-fg-muted hover:text-vscode-fg"
           }`}
         >
-          对话
+          {t.tabs.chat}
           {activeTab === "chat" && <span className="absolute inset-x-0 bottom-0 h-[2px] bg-vscode-accent" />}
         </button>
 
@@ -54,7 +56,7 @@ export default function MainArea({ openDiff, onCloseDiff }: MainAreaProps) {
             <button
               type="button"
               onClick={closeDiffTab}
-              title="关闭"
+              title={t.common.close}
               className="rounded p-0.5 opacity-0 hover:bg-vscode-list-hover group-hover:opacity-100"
             >
               <IconX size={11} />

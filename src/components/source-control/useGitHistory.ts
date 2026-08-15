@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { CommitInfo, FileEntry } from "./types";
+import { useI18n } from "../../i18n";
 
 interface UseGitHistoryResult {
   commits: CommitInfo[];
@@ -16,6 +17,7 @@ interface UseGitHistoryResult {
 
 /** bump `refreshSignal` (e.g. right after a commit) to force a re-fetch */
 export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
+  const { t } = useI18n();
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -37,12 +39,12 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
         setUnavailable(true);
         setError(null);
       } else {
-        setError(err instanceof Error ? err.message : "加载提交历史失败");
+        setError(err instanceof Error ? err.message : t.git.loadHistoryFailed);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();

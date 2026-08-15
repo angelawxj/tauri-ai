@@ -1,3 +1,5 @@
+import { useI18n } from "../../i18n";
+
 interface DiffViewProps {
   patch: string | null;
   loading: boolean;
@@ -13,12 +15,13 @@ function lineClass(line: string): string {
 }
 
 export default function DiffView({ patch, loading, error }: DiffViewProps) {
+  const { t } = useI18n();
   return (
     <div className="px-3 py-2 font-mono text-[12.5px] leading-[1.6]">
-      {loading && <div className="px-1 py-1 text-vscode-fg-dim">加载 diff…</div>}
+      {loading && <div className="px-1 py-1 text-vscode-fg-dim">{t.git.loadingDiff}</div>}
       {!loading && error && <div className="px-1 py-1 text-git-deleted">{error}</div>}
       {!loading && !error && (!patch || patch.length === 0) && (
-        <div className="px-1 py-1 text-vscode-fg-dim">没有可显示的改动</div>
+        <div className="px-1 py-1 text-vscode-fg-dim">{t.git.noDiffToShow}</div>
       )}
       {!loading && !error && patch && patch.length > 0 && (
         <div>

@@ -4,6 +4,7 @@ import type { CommitInfo, FileEntry } from "./types";
 import CommitGraph, { LANE_WIDTH } from "./CommitGraph";
 import RefBadge from "./RefBadge";
 import FileRow from "./FileRow";
+import { useI18n } from "../../i18n";
 
 export const ROW_HEIGHT = 28;
 const MAX_VISIBLE_REFS = 2;
@@ -33,6 +34,7 @@ export default function CommitRow({
   files,
   filesLoading,
 }: CommitRowProps) {
+  const { t } = useI18n();
   const messageFirstLine = commit.message.split("\n")[0];
   const isMerge = commit.parents.length > 1;
   const visibleRefs = commit.refs.slice(0, MAX_VISIBLE_REFS);
@@ -69,9 +71,9 @@ export default function CommitRow({
           <div className="px-2 py-1 text-[11px] text-vscode-fg-dim">
             {commit.author} · {formatFullTimestamp(commit.timestamp)} · {commit.hash}
           </div>
-          {filesLoading && <div className="px-2 py-1 text-[11.5px] text-vscode-fg-dim">加载改动文件…</div>}
+          {filesLoading && <div className="px-2 py-1 text-[11.5px] text-vscode-fg-dim">{t.git.loadingCommitFiles}</div>}
           {!filesLoading && files && files.length === 0 && (
-            <div className="px-2 py-1 text-[11.5px] text-vscode-fg-dim">此提交没有文件改动</div>
+            <div className="px-2 py-1 text-[11.5px] text-vscode-fg-dim">{t.git.noFileChangesInCommit}</div>
           )}
           {!filesLoading && files?.map((f) => <FileRow key={f.path} entry={f} variant="readonly" />)}
         </div>
