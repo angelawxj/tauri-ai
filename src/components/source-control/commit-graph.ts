@@ -1,7 +1,12 @@
-import type { CommitInfo } from "./types";
+import type { CommitInfo, GitHistoryContext } from "./types";
 
-// Orca's graph palette: current ref, base ref, remote ref, then unlabelled lanes.
-export const GRAPH_LANE_COLORS = ["#007acc", "#ea5c00", "#b66dff", "#ffb000", "#dc267f", "#40b0a6", "#ce9178"] as const;
+// The first three entries are semantic reference lanes; the remainder are Orca's
+// rotating, unlabelled lane palette.
+export const GRAPH_LANE_COLORS = ["#007acc", "#b66dff", "#ea5c00", "#ffb000", "#dc267f", "#994f00", "#40b0a6", "#b66dff"] as const;
+
+const CURRENT_REF_COLOR = 0;
+const REMOTE_REF_COLOR = 1;
+const FIRST_LANE_COLOR = 3;
 
 export interface GraphNode {
   id: string;
@@ -15,62 +20,100 @@ export interface GraphRow {
   parents: string[];
   parentCount: number;
   laneCount: number;
+  kind: "commit" | "incoming-changes" | "outgoing-changes";
+  isHead: boolean;
+  commit?: CommitInfo;
 }
 
 function cloneNode(node: GraphNode): GraphNode {
   return { ...node };
 }
 
-/** Port of Orca's input/output swimlane model. */
-function refColor(commit: CommitInfo, currentBranch?: string): number | undefined {
-  if (currentBranch && commit.refs.includes(currentBranch)) return 0;
-  if (commit.refs.some((ref) => ref.endsWith("/main"))) return 1;
-  if (currentBranch && commit.refs.includes(`origin/${currentBranch}`)) return 2;
+function commitColor(commit: CommitInfo, context?: GitHistoryContext): number | undefined {
+  // The backend deliberately sends display names in CommitInfo.refs. Do not infer
+  // a ref namespace from '/', because local branch names such as codex/foo also
+  // contain it. Orca matches the resolved current/upstream references instead.
+  if (context?.currentRef && commit.refs.includes(context.currentRef.name)) return CURRENT_REF_COLOR;
+  if (context?.remoteRef && commit.refs.includes(context.remoteRef.name)) return REMOTE_REF_COLOR;
   return undefined;
 }
 
-export function computeSwimlanes(commits: CommitInfo[], currentBranch?: string): GraphRow[] {
-  const rows: GraphRow[] = [];
-  let colorSequence = -1;
+function addOutgoingBoundary(rows: GraphRow[], currentRef?: GitHistoryContext["currentRef"]): void {
+  const revision = currentRef?.revision;
+  if (!revision) return;
+  const currentIndex = rows.findIndex((row) => row.isHead && row.commitHash === revision);
+  if (currentIndex === -1) return;
 
+  const current = rows[currentIndex]!;
+  const inputSwimlanes = current.inputSwimlanes.map(cloneNode);
+  const outputSwimlanes = inputSwimlanes.concat({ id: revision, colorIndex: CURRENT_REF_COLOR });
+  rows.splice(currentIndex, 0, {
+    inputSwimlanes, outputSwimlanes, commitHash: "git-history-outgoing-changes", parents: [revision], parentCount: 1,
+    laneCount: Math.max(inputSwimlanes.length, outputSwimlanes.length, 1), kind: "outgoing-changes", isHead: false,
+  });
+  current.inputSwimlanes.push({ id: revision, colorIndex: CURRENT_REF_COLOR });
+  current.laneCount = Math.max(current.inputSwimlanes.length, current.outputSwimlanes.length, 1);
+}
+
+function addIncomingBoundary(rows: GraphRow[], remoteRef?: GitHistoryContext["remoteRef"], mergeBase?: string): void {
+  if (!remoteRef?.revision || remoteRef.revision === mergeBase || !mergeBase) return;
+  const afterIndex = rows.findIndex((row) => row.commitHash === mergeBase);
+  if (afterIndex === -1) return;
+  let beforeIndex = -1;
+  for (let index = rows.length - 1; index >= 0; index -= 1) {
+    if (rows[index]!.outputSwimlanes.some((node) => node.id === mergeBase)) { beforeIndex = index; break; }
+  }
+  const after = rows[afterIndex]!;
+  const inputSwimlanes = beforeIndex === -1 ? after.inputSwimlanes.map(cloneNode) : rows[beforeIndex]!.outputSwimlanes.map((node) =>
+    node.id === mergeBase && node.colorIndex === REMOTE_REF_COLOR ? { id: "git-history-incoming-changes", colorIndex: REMOTE_REF_COLOR } : cloneNode(node),
+  );
+  const outputSwimlanes = after.inputSwimlanes.map(cloneNode);
+  if (!outputSwimlanes.some((node) => node.id === mergeBase && node.colorIndex === REMOTE_REF_COLOR)) {
+    const localIndex = outputSwimlanes.findIndex((node) => node.id === mergeBase && node.colorIndex === CURRENT_REF_COLOR);
+    outputSwimlanes.splice(localIndex === -1 ? outputSwimlanes.length : localIndex + 1, 0, { id: mergeBase, colorIndex: REMOTE_REF_COLOR });
+  }
+  if (!inputSwimlanes.some((node) => node.id === "git-history-incoming-changes" && node.colorIndex === REMOTE_REF_COLOR)) {
+    const remoteIndex = outputSwimlanes.findIndex((node) => node.id === mergeBase && node.colorIndex === REMOTE_REF_COLOR);
+    inputSwimlanes.splice(remoteIndex === -1 ? inputSwimlanes.length : remoteIndex, 0, { id: "git-history-incoming-changes", colorIndex: REMOTE_REF_COLOR });
+  }
+  rows.splice(afterIndex, 0, {
+    inputSwimlanes, outputSwimlanes, commitHash: "git-history-incoming-changes", parents: [mergeBase], parentCount: 1,
+    laneCount: Math.max(inputSwimlanes.length, outputSwimlanes.length, 1), kind: "incoming-changes", isHead: false,
+  });
+  after.inputSwimlanes = outputSwimlanes.map(cloneNode);
+  after.laneCount = Math.max(after.inputSwimlanes.length, after.outputSwimlanes.length, 1);
+}
+
+/** Port of Orca's input/output swimlane algorithm, including upstream boundary rows. */
+export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryContext): GraphRow[] {
+  const rows: GraphRow[] = [];
+  let laneSequence = -1;
   for (const commit of commits) {
     const inputSwimlanes = (rows[rows.length - 1]?.outputSwimlanes ?? []).map(cloneNode);
     const outputSwimlanes: GraphNode[] = [];
     let firstParentAdded = false;
-
     if (commit.parents.length > 0) {
       for (const node of inputSwimlanes) {
         if (node.id === commit.hash) {
-          if (!firstParentAdded) {
-            outputSwimlanes.push({ id: commit.parents[0], colorIndex: refColor(commit, currentBranch) ?? node.colorIndex });
-            firstParentAdded = true;
-          }
+          if (!firstParentAdded) { outputSwimlanes.push({ id: commit.parents[0]!, colorIndex: commitColor(commit, context) ?? node.colorIndex }); firstParentAdded = true; }
           continue;
         }
         outputSwimlanes.push(cloneNode(node));
       }
     }
-
-    for (let parentIndex = firstParentAdded ? 1 : 0; parentIndex < commit.parents.length; parentIndex += 1) {
-      const parentCommit = commits.find((candidate) => candidate.hash === commit.parents[parentIndex]);
-      const labeledColor = parentIndex === 0 ? refColor(commit, currentBranch) : parentCommit && refColor(parentCommit, currentBranch);
-      if (labeledColor !== undefined) {
-        outputSwimlanes.push({ id: commit.parents[parentIndex], colorIndex: labeledColor });
-      } else {
-        colorSequence = (colorSequence + 1) % (GRAPH_LANE_COLORS.length - 3);
-        outputSwimlanes.push({ id: commit.parents[parentIndex], colorIndex: colorSequence + 3 });
-      }
+    for (let index = firstParentAdded ? 1 : 0; index < commit.parents.length; index += 1) {
+      const parent = commits.find((candidate) => candidate.hash === commit.parents[index]);
+      let colorIndex = index === 0 ? commitColor(commit, context) : parent ? commitColor(parent, context) : undefined;
+      if (colorIndex === undefined) { laneSequence = (laneSequence + 1) % (GRAPH_LANE_COLORS.length - FIRST_LANE_COLOR); colorIndex = FIRST_LANE_COLOR + laneSequence; }
+      outputSwimlanes.push({ id: commit.parents[index]!, colorIndex });
     }
-
     rows.push({
-      inputSwimlanes,
-      outputSwimlanes,
-      commitHash: commit.hash,
-      parents: commit.parents,
-      parentCount: commit.parents.length,
-      laneCount: Math.max(inputSwimlanes.length, outputSwimlanes.length, 1),
+      inputSwimlanes, outputSwimlanes, commitHash: commit.hash, parents: commit.parents, parentCount: commit.parents.length,
+      laneCount: Math.max(inputSwimlanes.length, outputSwimlanes.length, 1), kind: "commit",
+      isHead: commit.hash === context?.currentRef?.revision, commit,
     });
   }
-
+  if (context?.hasIncomingChanges) addIncomingBoundary(rows, context.remoteRef, context.mergeBase);
+  if (context?.hasOutgoingChanges) addOutgoingBoundary(rows, context.currentRef);
   return rows;
 }

@@ -69,7 +69,7 @@ export default function MainArea({ openDiff, onCloseDiff }: MainAreaProps) {
       <div className="min-h-0 flex-1">
         {activeTab === "chat" && <ChatArea />}
         {activeTab === "diff" && openDiff && (
-          <DiffTab path={openDiff.path} staged={openDiff.staged} onClose={closeDiffTab} />
+          <DiffTab path={openDiff.path} staged={openDiff.staged} commitHash={openDiff.commitHash} onClose={closeDiffTab} />
         )}
       </div>
     </main>

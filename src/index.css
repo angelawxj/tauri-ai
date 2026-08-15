@@ -94,6 +94,11 @@ body {
   box-sizing: border-box;
 }
 
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
+}
+
 /* VSCode 风格细滚动条 */
 ::-webkit-scrollbar {
   width: 10px;

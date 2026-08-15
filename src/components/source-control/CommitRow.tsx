@@ -1,12 +1,32 @@
-import { IconChevronDown, IconChevronRight } from "../icons";
+import { IconChevronDown, IconChevronRight, IconCommitFile } from "../icons";
 import type { GraphRow } from "./commit-graph";
 import type { CommitInfo, FileEntry } from "./types";
 import CommitGraph from "./CommitGraph";
-import FileRow from "./FileRow";
+import { STATUS_COLOR_CLASS, STATUS_LABELS } from "./status";
 import { useI18n } from "../../i18n";
 
 export const ROW_HEIGHT = 26;
 const MAX_VISIBLE_REFS = 2;
+
+function splitPath(path: string): { dir: string; name: string } {
+  const index = path.lastIndexOf("/");
+  return index === -1 ? { dir: "", name: path } : { dir: path.slice(0, index), name: path.slice(index + 1) };
+}
+
+function CommitFileRow({ file, onOpen }: { file: FileEntry; onOpen?: (path: string) => void }) {
+  const { dir, name } = splitPath(file.path);
+  const colorClass = STATUS_COLOR_CLASS[file.status];
+  return (
+    <button type="button" title={file.path} onClick={() => onOpen?.(file.path)} className="group flex w-full min-w-0 items-center gap-1 py-1 pl-9 pr-3 text-left text-xs hover:bg-vscode-list-hover focus:bg-vscode-list-hover focus:outline-none">
+      <IconCommitFile size={14} className={`shrink-0 ${colorClass}`} />
+      <span className="min-w-0 flex-1 truncate">
+        <span className="text-vscode-fg">{name}</span>
+        {dir && <span className="ml-1.5 text-[11px] text-vscode-fg-dim">{dir}</span>}
+      </span>
+      <span className={`w-4 shrink-0 text-center text-[10px] font-bold ${colorClass}`}>{STATUS_LABELS[file.status]}</span>
+    </button>
+  );
+}
 
 interface CommitRowProps {
   commit: CommitInfo;
@@ -17,6 +37,7 @@ interface CommitRowProps {
   onToggle: () => void;
   files: FileEntry[] | undefined;
   filesLoading: boolean;
+  onOpenFile?: (path: string) => void;
 }
 
 function refClass(name: string, isHead: boolean): string {
@@ -25,7 +46,7 @@ function refClass(name: string, isHead: boolean): string {
   return "border-vscode-border-light text-vscode-fg-muted";
 }
 
-export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded, onToggle, files, filesLoading }: CommitRowProps) {
+export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded, onToggle, files, filesLoading, onOpenFile }: CommitRowProps) {
   const { lang, t } = useI18n();
   const subject = commit.message.split("\n")[0];
   const visibleRefs = commit.refs.slice(0, MAX_VISIBLE_REFS);
@@ -60,7 +81,7 @@ export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded
           </div>
           {filesLoading && <div className="px-3 py-1 pl-9 text-[11px] text-vscode-fg-dim">{t.git.loadingCommitFiles}</div>}
           {!filesLoading && files && files.length === 0 && <div className="px-3 py-1 pl-9 text-[11px] text-vscode-fg-dim">{t.git.noFileChangesInCommit}</div>}
-          {!filesLoading && files?.map((file) => <div key={file.path} className="pl-7"><FileRow entry={file} variant="readonly" /></div>)}
+          {!filesLoading && files?.map((file) => <CommitFileRow key={file.path} file={file} onOpen={onOpenFile} />)}
         </div>
       )}
     </div>

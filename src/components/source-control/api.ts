@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { BranchInfo, CommitInfo, FileEntry, GitStatus } from "./types";
+import type { BranchInfo, CommitInfo, FileEntry, GitHistoryContext, GitStatus } from "./types";
 import { detectLanguage, translations } from "../../i18n";
 
 const NOT_TAURI = "NOT_TAURI";
@@ -36,8 +36,11 @@ export const api = {
   discard: (path: string) => call<void>("git_discard", { path }),
   commit: (message: string) => call<string>("git_commit", { message }),
   log: (limit = 50) => call<CommitInfo[]>("git_log", { limit }),
+  historyContext: () => call<GitHistoryContext>("git_history_context"),
   commitFiles: (hash: string) => call<FileEntry[]>("git_commit_files", { hash }),
+  committedFiles: () => call<FileEntry[]>("git_committed_files"),
   diff: (path: string, staged: boolean) => call<string>("git_diff", { path, staged }),
+  commitDiff: (hash: string, path: string) => call<string>("git_commit_diff", { hash, path }),
   branches: () => call<BranchInfo[]>("git_branches"),
   checkoutBranch: (name: string) => call<void>("git_checkout_branch", { name }),
   push: (branch: string) => call<string>("git_push", { branch }),

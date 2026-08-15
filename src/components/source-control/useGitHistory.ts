@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
-import type { CommitInfo, FileEntry } from "./types";
+import type { CommitInfo, FileEntry, GitHistoryContext } from "./types";
 import { useI18n } from "../../i18n";
 
 interface UseGitHistoryResult {
   commits: CommitInfo[];
+  context: GitHistoryContext | undefined;
   loading: boolean;
   error: string | null;
   unavailable: boolean;
@@ -19,6 +20,7 @@ interface UseGitHistoryResult {
 export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
   const { t } = useI18n();
   const [commits, setCommits] = useState<CommitInfo[]>([]);
+  const [context, setContext] = useState<GitHistoryContext>();
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
@@ -30,8 +32,9 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const log = await api.log(50);
+      const [log, historyContext] = await Promise.all([api.log(50), api.historyContext()]);
       setCommits(log);
+      setContext(historyContext);
       setError(null);
       setUnavailable(false);
     } catch (err) {
@@ -53,6 +56,7 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
 
   const toggleExpanded = useCallback(
     (hash: string) => {
+      const opening = !expanded.has(hash);
       setExpanded((prev) => {
         const next = new Set(prev);
         if (next.has(hash)) {
@@ -63,7 +67,9 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
         return next;
       });
 
-      if (!fileCache[hash] && !loadingFiles.has(hash)) {
+      // Orca requests a commit's files only on its first expansion. Collapsing a
+      // row must remain a pure UI operation and cached results are reused.
+      if (opening && !fileCache[hash] && !loadingFiles.has(hash)) {
         setLoadingFiles((prev) => new Set(prev).add(hash));
         api
           .commitFiles(hash)
@@ -78,11 +84,12 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
           });
       }
     },
-    [fileCache, loadingFiles],
+    [expanded, fileCache, loadingFiles],
   );
 
   return {
     commits,
+    context,
     loading,
     error,
     unavailable,

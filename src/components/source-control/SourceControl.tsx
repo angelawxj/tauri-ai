@@ -7,9 +7,10 @@ import BranchSwitcher from "./BranchSwitcher";
 import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
 import HistoryPanel from "./HistoryPanel";
+import CommittedChangesSection from "./CommittedChangesSection";
 
 interface SourceControlProps {
-  onOpenDiff?: (path: string, staged: boolean) => void;
+  onOpenDiff?: (path: string, staged: boolean, commitHash?: string) => void;
 }
 
 export default function SourceControl({ onOpenDiff }: SourceControlProps) {
@@ -23,7 +24,8 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [pushing, setPushing] = useState(false);
 
   const staged = status?.staged ?? [];
-  const unstaged = status?.unstaged ?? [];
+  const unstaged = (status?.unstaged ?? []).filter((entry) => entry.status !== "U");
+  const untracked = (status?.unstaged ?? []).filter((entry) => entry.status === "U");
 
   const disabledReason = useMemo(() => {
     if (unavailable) return t.git.notConnected;
@@ -33,6 +35,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   }, [unavailable, message, staged.length, t]);
 
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
+  const canStageAll = !unavailable && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
 
   const withErrorHandling = async (fn: () => Promise<void>) => {
     setActionMessage(null);
@@ -75,8 +78,8 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   };
 
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-vscode-border px-3">
+    <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border bg-vscode-bg px-3">
         <BranchSwitcher currentBranch={status?.branch ?? "—"} onCheckedOut={handleBranchSwitched} />
         <div className="flex items-center gap-0.5">
           <button
@@ -103,10 +106,18 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
         <CommitBox
           message={message}
           onMessageChange={setMessage}
-          onCommit={() => void handleCommit()}
-          canCommit={canCommit}
-          disabledReason={disabledReason}
+          onCommit={() => {
+            if (canStageAll) {
+              void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
+            } else {
+              void handleCommit();
+            }
+          }}
+          canCommit={canCommit || canStageAll}
+          disabledReason={canStageAll ? "" : disabledReason}
           committing={committing}
+          actionLabel={canStageAll ? t.git.stageAllChanges : undefined}
+          actionTitle={canStageAll ? t.git.stageAllChanges : undefined}
         />
 
         {unavailable && (
@@ -123,7 +134,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
-        {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && (
+        {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && (
           <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">{t.git.noChangesDetected}</div>
         )}
 
@@ -179,11 +190,20 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
               }}
               onOpenDiff={onOpenDiff}
             />
+            <ChangesSection
+              title={t.git.untrackedFilesTitle}
+              entries={untracked}
+              variant="untracked"
+              onStage={(path) => void withErrorHandling(async () => { await api.stage(path); await refresh(); })}
+              onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
+              onOpenDiff={onOpenDiff}
+            />
+            <CommittedChangesSection title={t.git.committedChangesTitle} refreshSignal={historyTick} />
           </>
         )}
       </div>
 
-        <HistoryPanel refreshSignal={historyTick} currentBranch={status?.branch} />
+      <HistoryPanel refreshSignal={historyTick} onOpenCommitFile={(hash, path) => onOpenDiff?.(path, false, hash)} />
     </div>
   );
 }

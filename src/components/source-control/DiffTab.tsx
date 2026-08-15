@@ -7,10 +7,11 @@ import DiffView from "./DiffView";
 interface DiffTabProps {
   path: string;
   staged: boolean;
+  commitHash?: string;
   onClose: () => void;
 }
 
-export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
+export default function DiffTab({ path, staged, commitHash, onClose }: DiffTabProps) {
   const { t } = useI18n();
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -22,8 +23,7 @@ export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
     setDiff(null);
     setError(null);
 
-    api
-      .diff(path, staged)
+    (commitHash ? api.commitDiff(commitHash, path) : api.diff(path, staged))
       .then((text) => {
         if (!cancelled) setDiff(text);
       })
@@ -38,13 +38,13 @@ export default function DiffTab({ path, staged, onClose }: DiffTabProps) {
     return () => {
       cancelled = true;
     };
-  }, [path, staged]);
+  }, [path, staged, commitHash]);
 
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border px-3">
         <span className="min-w-0 truncate text-[12px] text-vscode-fg-muted" title={path}>
-          {path} <span className="text-vscode-fg-dim">· {staged ? t.git.staged : t.git.unstaged}</span>
+          {path} <span className="text-vscode-fg-dim">· {commitHash ? commitHash.slice(0, 7) : staged ? t.git.staged : t.git.unstaged}</span>
         </span>
         <button
           type="button"

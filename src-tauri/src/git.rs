@@ -30,6 +30,27 @@ pub struct CommitInfo {
 }
 
 #[derive(Serialize)]
+pub struct HistoryRef {
+    pub id: String,
+    pub name: String,
+    pub revision: Option<String>,
+}
+
+#[derive(Serialize)]
+pub struct GitHistoryContext {
+    #[serde(rename = "currentRef")]
+    pub current_ref: Option<HistoryRef>,
+    #[serde(rename = "remoteRef")]
+    pub remote_ref: Option<HistoryRef>,
+    #[serde(rename = "mergeBase")]
+    pub merge_base: Option<String>,
+    #[serde(rename = "hasIncomingChanges")]
+    pub has_incoming_changes: bool,
+    #[serde(rename = "hasOutgoingChanges")]
+    pub has_outgoing_changes: bool,
+}
+
+#[derive(Serialize)]
 pub struct BranchInfo {
     pub name: String,
     #[serde(rename = "isHead")]
@@ -242,10 +263,10 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
         .set_sorting(Sort::TOPOLOGICAL | Sort::TIME)
         .map_err(|e| e.to_string())?;
 
-    // 推入所有本地分支尖端，这样图谱能画出多分支拓扑，而不只是当前 HEAD 的直系祖先
-    if revwalk.push_glob("refs/heads/*").is_err() {
-        revwalk.push_head().map_err(|e| e.to_string())?;
-    }
+    // Keep Source Control scoped to the checked-out workspace history. Orca does
+    // the same and represents upstream-only commits through boundary rows instead
+    // of mixing every local branch tip into the revwalk.
+    revwalk.push_head().map_err(|e| e.to_string())?;
 
     // commit hash -> 指向它的本地分支/tag 短名，用于历史面板的 ref 徽章
     let mut ref_map: HashMap<String, Vec<String>> = HashMap::new();
@@ -291,6 +312,85 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
     }
 
     Ok(result)
+}
+
+/// Supplies the reference relationship that Orca uses to build its history graph.
+/// The visible log remains HEAD/local-history only; upstream-only commits are represented
+/// by boundary rows in the renderer, using this merge-base information.
+#[tauri::command]
+pub fn git_history_context() -> Result<GitHistoryContext, String> {
+    let repo = open_repo()?;
+    let head = match repo.head() {
+        Ok(head) => head,
+        Err(_) => {
+            return Ok(GitHistoryContext {
+                current_ref: None,
+                remote_ref: None,
+                merge_base: None,
+                has_incoming_changes: false,
+                has_outgoing_changes: false,
+            })
+        }
+    };
+    let head_oid = match head.target() {
+        Some(oid) => oid,
+        None => {
+            return Ok(GitHistoryContext {
+                current_ref: None,
+                remote_ref: None,
+                merge_base: None,
+                has_incoming_changes: false,
+                has_outgoing_changes: false,
+            })
+        }
+    };
+    let branch_name = head.shorthand().unwrap_or("HEAD").to_string();
+    let current_ref = HistoryRef {
+        id: head.name().unwrap_or("HEAD").to_string(),
+        name: branch_name.clone(),
+        revision: Some(head_oid.to_string()),
+    };
+
+    let remote_ref = if head.is_branch() {
+        repo.find_branch(&branch_name, BranchType::Local)
+            .ok()
+            .and_then(|branch| branch.upstream().ok())
+            .and_then(|upstream| {
+                let reference = upstream.get();
+                let revision = reference.target().or_else(|| reference.peel_to_commit().ok().map(|commit| commit.id()))?;
+                Some(HistoryRef {
+                    id: reference.name()?.to_string(),
+                    name: reference.shorthand()?.to_string(),
+                    revision: Some(revision.to_string()),
+                })
+            })
+    } else {
+        None
+    };
+
+    let merge_base = remote_ref
+        .as_ref()
+        .and_then(|remote| remote.revision.as_ref())
+        .and_then(|revision| git2::Oid::from_str(revision).ok())
+        .filter(|remote_oid| *remote_oid != head_oid)
+        .and_then(|remote_oid| repo.merge_base(head_oid, remote_oid).ok())
+        .map(|oid| oid.to_string());
+    let has_incoming_changes = remote_ref
+        .as_ref()
+        .and_then(|remote| remote.revision.as_ref())
+        .zip(merge_base.as_ref())
+        .is_some_and(|(remote, base)| remote != base);
+    let has_outgoing_changes = merge_base
+        .as_ref()
+        .is_some_and(|base| head_oid.to_string() != *base);
+
+    Ok(GitHistoryContext {
+        current_ref: Some(current_ref),
+        remote_ref,
+        merge_base,
+        has_incoming_changes,
+        has_outgoing_changes,
+    })
 }
 
 #[tauri::command]
@@ -398,6 +498,80 @@ pub fn git_diff(path: String, staged: bool) -> Result<String, String> {
     })
     .map_err(|e| e.to_string())?;
 
+    Ok(out)
+}
+
+/// Files committed on the current branch relative to its upstream/base. This is
+/// intentionally separate from the commit history list, matching Orca's
+/// "Committed Changes" source-control section.
+#[tauri::command]
+pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
+    let repo = open_repo()?;
+    let head = repo.head().map_err(|e| e.to_string())?;
+    let head_oid = match head.target() {
+        Some(oid) => oid,
+        None => return Ok(Vec::new()),
+    };
+    let branch_name = head.shorthand().unwrap_or("");
+    let upstream_oid = repo
+        .find_branch(branch_name, BranchType::Local)
+        .ok()
+        .and_then(|branch| branch.upstream().ok())
+        .and_then(|branch| branch.get().target())
+        .or_else(|| repo.find_reference("refs/remotes/origin/main").ok().and_then(|reference| reference.target()))
+        .or_else(|| repo.find_reference("refs/heads/main").ok().and_then(|reference| reference.target()));
+    let Some(upstream_oid) = upstream_oid else { return Ok(Vec::new()) };
+    let base_oid = repo.merge_base(head_oid, upstream_oid).unwrap_or(upstream_oid);
+    if base_oid == head_oid {
+        return Ok(Vec::new());
+    }
+    let base_tree = repo.find_commit(base_oid).and_then(|commit| commit.tree()).map_err(|e| e.to_string())?;
+    let head_tree = repo.find_commit(head_oid).and_then(|commit| commit.tree()).map_err(|e| e.to_string())?;
+    let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None).map_err(|e| e.to_string())?;
+    let mut files = Vec::new();
+    for delta in diff.deltas() {
+        let status = match delta.status() {
+            Delta::Added | Delta::Copied => "A",
+            Delta::Deleted => "D",
+            Delta::Renamed => "R",
+            _ => "M",
+        };
+        let path = delta.new_file().path().or_else(|| delta.old_file().path()).map(|path| path.to_string_lossy().to_string()).unwrap_or_default();
+        if !path.is_empty() {
+            files.push(FileEntry { path, status: status.to_string() });
+        }
+    }
+    Ok(files)
+}
+
+/// Returns one file's patch as introduced by a historical commit, compared with
+/// its first parent. This powers file clicks inside the lazy commit-history list.
+#[tauri::command]
+pub fn git_commit_diff(hash: String, path: String) -> Result<String, String> {
+    let repo = open_repo()?;
+    let oid = git2::Oid::from_str(&hash).map_err(|e| e.to_string())?;
+    let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
+    let tree = commit.tree().map_err(|e| e.to_string())?;
+    let parent_tree = if commit.parent_count() > 0 {
+        Some(commit.parent(0).map_err(|e| e.to_string())?.tree().map_err(|e| e.to_string())?)
+    } else {
+        None
+    };
+    let mut opts = DiffOptions::new();
+    opts.pathspec(&path);
+    let diff = repo
+        .diff_tree_to_tree(parent_tree.as_ref(), Some(&tree), Some(&mut opts))
+        .map_err(|e| e.to_string())?;
+    let mut out = String::new();
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        match line.origin() {
+            '+' | '-' | ' ' => out.push(line.origin()),
+            _ => {}
+        }
+        out.push_str(&String::from_utf8_lossy(line.content()));
+        true
+    })
+    .map_err(|e| e.to_string())?;
     Ok(out)
 }
 

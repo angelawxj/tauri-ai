@@ -55,6 +55,8 @@ export interface TranslationDict {
     noChangesDetected: string;
     stagedChangesTitle: string;
     changesTitle: string;
+    untrackedFilesTitle: string;
+    committedChangesTitle: string;
     discardAllChanges: string;
     stageAllChanges: string;
     unstageAll: string;
@@ -153,6 +155,8 @@ const zh: TranslationDict = {
     noChangesDetected: "没有检测到更改",
     stagedChangesTitle: "暂存的更改",
     changesTitle: "更改",
+    untrackedFilesTitle: "未跟踪文件",
+    committedChangesTitle: "已提交的更改",
     discardAllChanges: "丢弃全部更改",
     stageAllChanges: "暂存全部更改",
     unstageAll: "取消暂存全部",
@@ -251,6 +255,8 @@ const en: TranslationDict = {
     noChangesDetected: "No changes detected",
     stagedChangesTitle: "Staged Changes",
     changesTitle: "Changes",
+    untrackedFilesTitle: "Untracked Files",
+    committedChangesTitle: "Committed Changes",
     discardAllChanges: "Discard All Changes",
     stageAllChanges: "Stage All Changes",
     unstageAll: "Unstage All",

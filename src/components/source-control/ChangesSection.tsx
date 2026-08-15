@@ -7,7 +7,7 @@ import { useI18n } from "../../i18n";
 interface ChangesSectionProps {
   title: string;
   entries: FileEntry[];
-  variant: "staged" | "unstaged";
+  variant: "staged" | "unstaged" | "untracked";
   onStage?: (path: string) => void;
   onUnstage?: (path: string) => void;
   onDiscard?: (path: string) => void;
@@ -35,31 +35,28 @@ export default function ChangesSection({
   if (entries.length === 0) return null;
 
   return (
-    <div className="select-none">
+    <div className="select-none bg-vscode-bg">
       <div
         role="button"
         tabIndex={0}
         onClick={() => setCollapsed((c) => !c)}
-        className="group flex h-[22px] w-full items-center gap-1 px-2 text-[11px] font-semibold uppercase tracking-wide text-vscode-fg-muted hover:bg-vscode-list-hover"
+        className="group flex w-full items-center gap-1 px-3 pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.05em] text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
       >
         {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
         <span className="flex-1 truncate">
-          {title} <span className="text-vscode-fg-dim">({entries.length})</span>
+          {title} <span className="ml-1 text-vscode-fg-dim">{entries.length}</span>
         </span>
-        <span className="hidden items-center gap-0.5 group-hover:flex">
-          {variant === "unstaged" && (
+        <button
+          type="button"
+          onClick={(event) => { event.stopPropagation(); setCollapsed(false); }}
+          className="mr-1 shrink-0 normal-case text-[11px] font-medium tracking-normal text-vscode-fg-muted hover:text-vscode-fg"
+        >
+          查看全部
+        </button>
+        <span className={`flex shrink-0 items-center justify-end gap-0.5 opacity-0 pointer-events-none transition-opacity group-hover:pointer-events-auto group-hover:opacity-100 ${variant === "unstaged" ? "w-11" : "w-5"}`}>
+          {(variant === "unstaged" || variant === "untracked") && (
             <>
-              <button
-                type="button"
-                title={t.git.discardAllChanges}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onDiscardAll?.();
-                }}
-                className="rounded p-0.5 normal-case text-vscode-fg-muted hover:bg-vscode-list-active hover:text-vscode-fg"
-              >
-                <IconUndo size={13} />
-              </button>
+              {variant === "unstaged" && <button type="button" title={t.git.discardAllChanges} onClick={(e) => { e.stopPropagation(); onDiscardAll?.(); }} className="rounded p-0.5 normal-case text-vscode-fg-muted hover:bg-vscode-list-active hover:text-vscode-fg"><IconUndo size={13} /></button>}
               <button
                 type="button"
                 title={t.git.stageAllChanges}
@@ -90,7 +87,7 @@ export default function ChangesSection({
       </div>
 
       {!collapsed && (
-        <div className="pb-1">
+        <div className="pb-2">
           {entries.map((entry) => (
             <FileRow
               key={entry.path}
