@@ -36,7 +36,6 @@ export default function CommitRow({
 }: CommitRowProps) {
   const { t } = useI18n();
   const messageFirstLine = commit.message.split("\n")[0];
-  const isMerge = commit.parents.length > 1;
   const visibleRefs = commit.refs.slice(0, MAX_VISIBLE_REFS);
   const overflowCount = commit.refs.length - visibleRefs.length;
 
@@ -49,7 +48,7 @@ export default function CommitRow({
         className="grid w-full items-center gap-1.5 px-2 hover:bg-vscode-list-hover"
         style={{ height: ROW_HEIGHT, gridTemplateColumns: "auto auto minmax(0,1fr) auto" }}
       >
-        <CommitGraph row={graphRow} maxLanes={maxLanes} rowHeight={ROW_HEIGHT} isHead={isHead} isMerge={isMerge} />
+        <CommitGraph row={graphRow} maxLanes={maxLanes} rowHeight={ROW_HEIGHT} isHead={isHead} />
         <span className="flex shrink-0 items-center text-vscode-fg-dim">
           {expanded ? <IconChevronDown size={12} /> : <IconChevronRight size={12} />}
         </span>

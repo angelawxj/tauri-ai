@@ -19,4 +19,6 @@ export interface CommitInfo {
   timestamp: number;
   /** full parent commit hashes, in parent order (first parent first) */
   parents: string[];
+  /** local branch, remote-tracking branch, or tag names pointing at this commit */
+  refs: string[];
 }

@@ -183,7 +183,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
         )}
       </div>
 
-      <HistoryPanel refreshSignal={historyTick} headBranchName={status?.branch ?? null} />
+      <HistoryPanel refreshSignal={historyTick} />
     </div>
   );
 }

@@ -18,11 +18,9 @@ function maxHeight(): number {
 interface HistoryPanelProps {
   /** bump to force a re-fetch (e.g. right after a commit) */
   refreshSignal: number;
-  /** current branch name (from git status), used to find the HEAD commit for graph styling */
-  headBranchName: string | null;
 }
 
-export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryPanelProps) {
+export default function HistoryPanel({ refreshSignal }: HistoryPanelProps) {
   const { t } = useI18n();
   const { commits, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
     useGitHistory(refreshSignal);
@@ -32,7 +30,6 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
 
   const graphRows = computeSwimlanes(commits);
   const laneCount = Math.max(1, ...graphRows.map((r) => r.laneCount));
-  const headHash = headBranchName ? commits.find((c) => c.refs.includes(headBranchName))?.hash : undefined;
 
   const onDragStart = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -128,7 +125,7 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
                 commit={commit}
                 graphRow={graphRows[i]}
                 maxLanes={laneCount}
-                isHead={commit.hash === headHash}
+                isHead={i === 0}
                 expanded={expanded.has(commit.hash)}
                 onToggle={() => toggleExpanded(commit.hash)}
                 files={filesFor(commit.hash)}

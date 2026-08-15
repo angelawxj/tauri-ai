@@ -1,71 +1,75 @@
 import { GRAPH_PALETTE, type GraphRow } from "./commit-graph";
 
-export const LANE_WIDTH = 14;
-const DOT_RADIUS = 3.5;
+export const LANE_WIDTH = 11;
+const ROW_HEIGHT = 24;
+const CURVE_RADIUS = 5;
+const NODE_Y = ROW_HEIGHT / 2;
+const CIRCLE_RADIUS = 3.5;
+const CIRCLE_STROKE_WIDTH = 1.5;
 
 interface CommitGraphProps {
   row: GraphRow;
   maxLanes: number;
   rowHeight: number;
+  isHead?: boolean;
 }
 
-function laneX(lane: number): number {
-  return lane * LANE_WIDTH + LANE_WIDTH / 2;
-}
+function graphColor(colorIndex: number): string { return GRAPH_PALETTE[colorIndex]; }
 
-export default function CommitGraph({ row, maxLanes, rowHeight }: CommitGraphProps) {
-  const width = Math.max(1, maxLanes) * LANE_WIDTH;
-  const midY = rowHeight / 2;
-  const dotX = laneX(row.dot.lane);
-  const dotColor = GRAPH_PALETTE[row.dot.colorIndex];
+export default function CommitGraph({ row, isHead = false }: CommitGraphProps) {
+  const input = row.inputSwimlanes;
+  const output = row.outputSwimlanes;
+  const inputIndex = input.findIndex((node) => node.id === row.commitHash);
+  const circleIndex = inputIndex === -1 ? input.length : inputIndex;
+  const circleColor = output[circleIndex]?.colorIndex ?? input[circleIndex]?.colorIndex ?? 0;
+  const width = LANE_WIDTH * (Math.max(input.length, output.length, 1) + 1);
+  const paths: JSX.Element[] = [];
+  let outputIndex = 0;
 
+  for (let index = 0; index < input.length; index += 1) {
+    const node = input[index];
+    const color = graphColor(node.colorIndex);
+    if (node.id === row.commitHash) {
+      if (index !== circleIndex) {
+        paths.push(<path key={`merge-${index}`} d={`M ${LANE_WIDTH * (index + 1)} 0 A ${LANE_WIDTH} ${LANE_WIDTH} 0 0 1 ${LANE_WIDTH * index} ${NODE_Y} H ${LANE_WIDTH * (circleIndex + 1)}`} fill="none" stroke={color} strokeLinecap="round" strokeWidth={1} />);
+      } else { outputIndex += 1; }
+      continue;
+    }
+    if (outputIndex < output.length && node.id === output[outputIndex].id) {
+      if (index === outputIndex) {
+        paths.push(<path key={`vertical-${index}`} d={`M ${LANE_WIDTH * (index + 1)} 0 V ${ROW_HEIGHT}`} fill="none" stroke={color} strokeLinecap="round" strokeWidth={1} />);
+      } else {
+        const x = LANE_WIDTH * (index + 1);
+        const targetX = LANE_WIDTH * (outputIndex + 1);
+        paths.push(<path key={`shift-${index}-${outputIndex}`} d={`M ${x} 0 V 6 A ${CURVE_RADIUS} ${CURVE_RADIUS} 0 0 1 ${x - CURVE_RADIUS} ${ROW_HEIGHT / 2} H ${targetX + CURVE_RADIUS} A ${CURVE_RADIUS} ${CURVE_RADIUS} 0 0 0 ${targetX} ${ROW_HEIGHT / 2 + CURVE_RADIUS} V ${ROW_HEIGHT}`} fill="none" stroke={color} strokeLinecap="round" strokeWidth={1} />);
+      }
+      outputIndex += 1;
+    }
+  }
+
+  for (let parentIndex = 1; parentIndex < row.parentCount; parentIndex += 1) {
+    const parentHash = row.parents[parentIndex];
+    let parentOutputIndex = -1;
+    for (let index = output.length - 1; index >= 0; index -= 1) {
+      if (output[index].id === parentHash) {
+        parentOutputIndex = index;
+        break;
+      }
+    }
+    if (parentOutputIndex === -1) continue;
+    const color = graphColor(output[parentOutputIndex].colorIndex);
+    paths.push(<path key={`parent-${parentIndex}`} d={`M ${LANE_WIDTH * parentOutputIndex} ${ROW_HEIGHT / 2} A ${LANE_WIDTH} ${LANE_WIDTH} 0 0 1 ${LANE_WIDTH * (parentOutputIndex + 1)} ${ROW_HEIGHT} M ${LANE_WIDTH * parentOutputIndex} ${ROW_HEIGHT / 2} H ${LANE_WIDTH * (circleIndex + 1)}`} fill="none" stroke={color} strokeLinecap="round" strokeWidth={1} />);
+  }
+
+  if (inputIndex !== -1) paths.push(<path key="into-node" d={`M ${LANE_WIDTH * (circleIndex + 1)} 0 V ${ROW_HEIGHT / 2}`} fill="none" stroke={graphColor(input[inputIndex].colorIndex)} strokeLinecap="round" strokeWidth={1} />);
+  if (row.parentCount > 0) paths.push(<path key="out-node" d={`M ${LANE_WIDTH * (circleIndex + 1)} ${ROW_HEIGHT / 2} V ${ROW_HEIGHT}`} fill="none" stroke={graphColor(circleColor)} strokeLinecap="round" strokeWidth={1} />);
+
+  const cx = LANE_WIDTH * (circleIndex + 1);
+  const isMerge = row.parentCount > 1;
   return (
-    <svg width={width} height={rowHeight} className="shrink-0 overflow-visible">
-      {row.passThrough.map((p) => (
-        <line
-          key={`pass-${p.lane}`}
-          x1={laneX(p.lane)}
-          y1={0}
-          x2={laneX(p.lane)}
-          y2={rowHeight}
-          stroke={GRAPH_PALETTE[p.colorIndex]}
-          strokeWidth={1.5}
-        />
-      ))}
-
-      {row.dot.hasIncoming && (
-        <line x1={dotX} y1={0} x2={dotX} y2={midY} stroke={dotColor} strokeWidth={1.5} />
-      )}
-
-      {row.edgesToNext.map((edge, i) => {
-        const x1 = laneX(edge.fromLane);
-        const x2 = laneX(edge.toLane);
-        const color = GRAPH_PALETTE[edge.colorIndex];
-        if (x1 === x2) {
-          return (
-            <line
-              key={`edge-${i}`}
-              x1={x1}
-              y1={midY}
-              x2={x2}
-              y2={rowHeight}
-              stroke={color}
-              strokeWidth={1.5}
-            />
-          );
-        }
-        return (
-          <path
-            key={`edge-${i}`}
-            d={`M ${x1} ${midY} C ${x1} ${midY + rowHeight * 0.3}, ${x2} ${rowHeight - rowHeight * 0.3}, ${x2} ${rowHeight}`}
-            fill="none"
-            stroke={color}
-            strokeWidth={1.5}
-          />
-        );
-      })}
-
-      <circle cx={dotX} cy={midY} r={DOT_RADIUS} fill={dotColor} stroke="#1e1e1e" strokeWidth={1.5} />
+    <svg aria-hidden="true" className="shrink-0 overflow-visible" width={width} height={ROW_HEIGHT} viewBox={`0 0 ${width} ${ROW_HEIGHT}`}>
+      {paths}
+      {isHead ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 3} fill={graphColor(circleColor)} stroke="var(--color-vscode-panel)" strokeWidth={CIRCLE_STROKE_WIDTH} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_STROKE_WIDTH} fill="var(--color-vscode-panel)" /></> : isMerge ? <><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS + 1} fill={graphColor(circleColor)} /><circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS - 1.5} fill="var(--color-vscode-panel)" /></> : <circle cx={cx} cy={NODE_Y} r={CIRCLE_RADIUS} fill={graphColor(circleColor)} />}
     </svg>
   );
 }
