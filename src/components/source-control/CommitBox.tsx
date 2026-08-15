@@ -87,7 +87,7 @@ export default function CommitBox({
         className="min-h-14 w-full resize-none rounded-md border border-vscode-input-border bg-vscode-input-bg px-2 py-1.5 text-xs text-vscode-fg shadow-sm placeholder:text-vscode-fg-dim focus:border-vscode-accent focus:outline-none"
       />
       <div className="relative flex items-stretch">
-        <button type="button" onClick={onCommit} disabled={!canCommit || committing} title={canCommit ? actionTitle ?? t.git.commitTitle : disabledReason} className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45 ${actionKind === "publish" ? "rounded-l-md border-vscode-input-border bg-vscode-bg text-vscode-fg hover:bg-vscode-list-hover" : hasMoreActions ? "rounded-l-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover" : "rounded-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover"}`}>
+        <button type="button" onClick={onCommit} disabled={!canCommit || committing} title={canCommit ? actionTitle ?? t.git.commitTitle : disabledReason} className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45 ${hasMoreActions ? "rounded-l-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover" : "rounded-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover"}`}>
           {actionKind === "publish" ? <IconUpload size={13} /> : actionKind === "stage" ? <IconPlus size={13} /> : <IconCheck size={13} />}
           {committing ? t.git.committing : actionLabel ?? t.git.commit}
         </button>
@@ -95,7 +95,7 @@ export default function CommitBox({
           const rect = menuButtonRef.current?.getBoundingClientRect();
           if (rect) setMenuPosition({ left: Math.max(8, Math.min(rect.right - 240, window.innerWidth - 248)), top: rect.bottom + 4 });
           setMenuOpen((open) => !open);
-        }} className={`w-10 border px-2 ${actionKind === "publish" ? "rounded-r-md border-vscode-input-border bg-vscode-bg text-vscode-fg hover:bg-vscode-list-hover" : "rounded-r-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover"}`}><IconChevronDown size={13} /></button>}
+        }} className="w-10 rounded-r-md border border-vscode-button bg-vscode-button px-2 text-vscode-button-fg hover:bg-vscode-button-hover"><IconChevronDown size={13} /></button>}
       </div>
       {menuOpen && menuPosition && createPortal(
         <div ref={menuRef} role="menu" className="fixed z-[100] min-w-60 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-xl" style={menuPosition}>
