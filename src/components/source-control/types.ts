@@ -37,6 +37,7 @@ export interface HistoryRef {
 export interface GitHistoryContext {
   currentRef?: HistoryRef;
   remoteRef?: HistoryRef;
+  baseRef?: HistoryRef;
   mergeBase?: string;
   hasIncomingChanges: boolean;
   hasOutgoingChanges: boolean;

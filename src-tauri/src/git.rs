@@ -1,6 +1,6 @@
 use git2::{BranchType, Delta, DiffOptions, IndexAddOption, Repository, Sort, Status};
 use serde::Serialize;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 use tauri::State;
@@ -50,6 +50,8 @@ pub struct GitHistoryContext {
     pub current_ref: Option<HistoryRef>,
     #[serde(rename = "remoteRef")]
     pub remote_ref: Option<HistoryRef>,
+    #[serde(rename = "baseRef")]
+    pub base_ref: Option<HistoryRef>,
     #[serde(rename = "mergeBase")]
     pub merge_base: Option<String>,
     #[serde(rename = "hasIncomingChanges")]
@@ -352,7 +354,21 @@ pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>,
     // of mixing every local branch tip into the revwalk.
     revwalk.push_head().map_err(|e| e.to_string())?;
 
-    // commit hash -> 指向它的本地分支/tag 短名，用于历史面板的 ref 徽章
+    // Orca avoids rendering origin/dev and dev as two separate reference chips.
+    // Keep remote-only branches, but drop a remote ref when its local peer exists.
+    let local_ref_names: HashSet<String> = repo
+        .references()
+        .map_err(|e| e.to_string())?
+        .filter_map(|reference| {
+            let reference = reference.ok()?;
+            reference
+                .name()?
+                .strip_prefix("refs/heads/")
+                .map(str::to_string)
+        })
+        .collect();
+
+    // commit hash -> 指向它的分支/tag 短名，用于历史面板的 ref 徽章
     let mut ref_map: HashMap<String, Vec<String>> = HashMap::new();
     let refs = repo.references().map_err(|e| e.to_string())?;
     for r in refs {
@@ -360,6 +376,13 @@ pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>,
         let name = r.name().unwrap_or("").to_string();
         if name.starts_with("refs/remotes/") && name.ends_with("/HEAD") {
             continue;
+        }
+        if let Some(remote_name) = name.strip_prefix("refs/remotes/") {
+            if let Some((_, local_peer)) = remote_name.split_once('/') {
+                if local_ref_names.contains(local_peer) {
+                    continue;
+                }
+            }
         }
         let short = name
             .strip_prefix("refs/heads/")
@@ -410,6 +433,7 @@ pub fn git_history_context(state: State<RepoState>) -> Result<GitHistoryContext,
             return Ok(GitHistoryContext {
                 current_ref: None,
                 remote_ref: None,
+                base_ref: None,
                 merge_base: None,
                 has_incoming_changes: false,
                 has_outgoing_changes: false,
@@ -422,6 +446,7 @@ pub fn git_history_context(state: State<RepoState>) -> Result<GitHistoryContext,
             return Ok(GitHistoryContext {
                 current_ref: None,
                 remote_ref: None,
+                base_ref: None,
                 merge_base: None,
                 has_incoming_changes: false,
                 has_outgoing_changes: false,
@@ -468,9 +493,37 @@ pub fn git_history_context(state: State<RepoState>) -> Result<GitHistoryContext,
         .as_ref()
         .is_some_and(|base| head_oid.to_string() != *base);
 
+    // Orca gives the branch at the fork point its own base-ref lane.  Selecting
+    // a local ref at the merge base prevents the current branch's blue lane
+    // from incorrectly coloring the entire shared history.
+    let base_ref = merge_base.as_ref().and_then(|base_revision| {
+        let base_oid = git2::Oid::from_str(base_revision).ok()?;
+        let mut candidates = repo
+            .references()
+            .ok()?
+            .filter_map(|reference| {
+                let reference = reference.ok()?;
+                let full_name = reference.name()?.to_string();
+                let short_name = full_name.strip_prefix("refs/heads/")?.to_string();
+                (reference.target() == Some(base_oid) && full_name != current_ref.id).then_some(HistoryRef {
+                    id: full_name,
+                    name: short_name,
+                    revision: Some(base_revision.clone()),
+                })
+            })
+            .collect::<Vec<_>>();
+        candidates.sort_by_key(|reference| match reference.name.as_str() {
+            "dev" => 0,
+            "main" => 1,
+            _ => 2,
+        });
+        candidates.into_iter().next()
+    });
+
     Ok(GitHistoryContext {
         current_ref: Some(current_ref),
         remote_ref,
+        base_ref,
         merge_base,
         has_incoming_changes,
         has_outgoing_changes,
@@ -746,6 +799,11 @@ pub fn git_force_push(branch: String, state: State<RepoState>) -> Result<String,
 #[tauri::command]
 pub fn git_rebase_main(state: State<RepoState>) -> Result<String, String> {
     run_git(&["rebase", "origin/main"], &repo_root(&state))
+}
+
+#[tauri::command]
+pub fn git_abort_merge(state: State<RepoState>) -> Result<String, String> {
+    run_git(&["merge", "--abort"], &repo_root(&state))
 }
 
 #[tauri::command]

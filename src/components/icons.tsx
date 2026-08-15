@@ -188,3 +188,26 @@ export function IconX({ size = 16, className }: IconProps) {
     </svg>
   );
 }
+
+/** 用于“用 AI 解决”等 AI 相关操作，样式对齐 Orca 的 lucide Sparkles 图标 */
+export function IconSparkle({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M7.345 1.876a.667.667 0 0 1 1.311 0l.701 3.705a1.333 1.333 0 0 0 1.063 1.063l3.705.701a.667.667 0 0 1 0 1.311l-3.705.701a1.333 1.333 0 0 0-1.063 1.063l-.701 3.705a.667.667 0 0 1-1.311 0l-.701-3.705a1.333 1.333 0 0 0-1.063-1.063l-3.705-.701a.667.667 0 0 1 0-1.311l3.705-.701a1.333 1.333 0 0 0 1.063-1.063z" />
+      <path d="M13.333 1.333v2.667" />
+      <path d="M14.667 2.667h-2.667" />
+      <circle cx="2.667" cy="13.333" r="1.333" />
+    </svg>
+  );
+}
+
+/** Git 合并图标，用于“评审冲突”等操作，样式对齐 Orca 的 GitMerge 图标 */
+export function IconGitMerge({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <circle cx="12" cy="12" r="2" />
+      <circle cx="4" cy="4" r="2" />
+      <path d="M4 14V6a6 6 0 0 0 6 6" />
+    </svg>
+  );
+}

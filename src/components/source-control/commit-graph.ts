@@ -6,6 +6,7 @@ export const GRAPH_LANE_COLORS = ["#007acc", "#b66dff", "#ea5c00", "#ffb000", "#
 
 const CURRENT_REF_COLOR = 0;
 const REMOTE_REF_COLOR = 1;
+const BASE_REF_COLOR = 2;
 const FIRST_LANE_COLOR = 3;
 
 export interface GraphNode {
@@ -29,11 +30,32 @@ function cloneNode(node: GraphNode): GraphNode {
   return { ...node };
 }
 
-function commitColor(commit: CommitInfo, context?: GitHistoryContext): number | undefined {
+function resolveBaseCommitHash(commits: CommitInfo[], context?: GitHistoryContext): string | undefined {
+  if (context?.baseRef?.revision) return context.baseRef.revision;
+  if (context?.mergeBase) return context.mergeBase;
+
+  // Orca persists the selected base branch ("dev" in the inspected worktree).
+  // Our lightweight backend has no branch-base selector yet, so use the first
+  // matching local base reference as a deterministic equivalent.
+  return commits.find((commit) =>
+    commit.refs.some((ref) => ref === "dev" || ref === "main"),
+  )?.hash;
+}
+
+function commitColor(
+  commit: CommitInfo,
+  context: GitHistoryContext | undefined,
+  baseCommitHash: string | undefined,
+): number | undefined {
   // The backend deliberately sends display names in CommitInfo.refs. Do not infer
   // a ref namespace from '/', because local branch names such as codex/foo also
   // contain it. Orca matches the resolved current/upstream references instead.
   if (context?.currentRef && commit.refs.includes(context.currentRef.name)) return CURRENT_REF_COLOR;
+  if (context?.baseRef && commit.refs.includes(context.baseRef.name)) return BASE_REF_COLOR;
+  // Orca switches to the base-ref lane at the merge base.  Without this
+  // boundary the current branch's blue lane incorrectly continues through
+  // the shared history, making the lower history graph monochrome.
+  if (baseCommitHash === commit.hash) return BASE_REF_COLOR;
   if (context?.remoteRef && commit.refs.includes(context.remoteRef.name)) return REMOTE_REF_COLOR;
   return undefined;
 }
@@ -88,6 +110,7 @@ function addIncomingBoundary(rows: GraphRow[], remoteRef?: GitHistoryContext["re
 export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryContext): GraphRow[] {
   const rows: GraphRow[] = [];
   let laneSequence = -1;
+  const baseCommitHash = resolveBaseCommitHash(commits, context);
   for (const commit of commits) {
     const inputSwimlanes = (rows[rows.length - 1]?.outputSwimlanes ?? []).map(cloneNode);
     const outputSwimlanes: GraphNode[] = [];
@@ -95,7 +118,7 @@ export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryCont
     if (commit.parents.length > 0) {
       for (const node of inputSwimlanes) {
         if (node.id === commit.hash) {
-          if (!firstParentAdded) { outputSwimlanes.push({ id: commit.parents[0]!, colorIndex: commitColor(commit, context) ?? node.colorIndex }); firstParentAdded = true; }
+          if (!firstParentAdded) { outputSwimlanes.push({ id: commit.parents[0]!, colorIndex: commitColor(commit, context, baseCommitHash) ?? node.colorIndex }); firstParentAdded = true; }
           continue;
         }
         outputSwimlanes.push(cloneNode(node));
@@ -103,7 +126,7 @@ export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryCont
     }
     for (let index = firstParentAdded ? 1 : 0; index < commit.parents.length; index += 1) {
       const parent = commits.find((candidate) => candidate.hash === commit.parents[index]);
-      let colorIndex = index === 0 ? commitColor(commit, context) : parent ? commitColor(parent, context) : undefined;
+      let colorIndex = index === 0 ? commitColor(commit, context, baseCommitHash) : parent ? commitColor(parent, context, baseCommitHash) : undefined;
       if (colorIndex === undefined) { laneSequence = (laneSequence + 1) % (GRAPH_LANE_COLORS.length - FIRST_LANE_COLOR); colorIndex = FIRST_LANE_COLOR + laneSequence; }
       outputSwimlanes.push({ id: commit.parents[index]!, colorIndex });
     }

@@ -6,8 +6,10 @@ import { useI18n } from "../../i18n";
 
 interface ChangesSectionProps {
   title: string;
+  titleSuffix?: string;
+  titleSuffixClassName?: string;
   entries: FileEntry[];
-  variant: "staged" | "unstaged" | "untracked";
+  variant: "staged" | "unstaged" | "untracked" | "conflict";
   onStage?: (path: string) => void;
   onUnstage?: (path: string) => void;
   onDiscard?: (path: string) => void;
@@ -19,6 +21,8 @@ interface ChangesSectionProps {
 
 export default function ChangesSection({
   title,
+  titleSuffix,
+  titleSuffixClassName,
   entries,
   variant,
   onStage,
@@ -35,7 +39,7 @@ export default function ChangesSection({
   if (entries.length === 0) return null;
 
   return (
-    <div className="select-none bg-vscode-bg">
+    <div className={`select-none bg-vscode-bg ${variant === "conflict" ? "mt-2" : ""}`}>
       <div
         role="button"
         tabIndex={0}
@@ -44,7 +48,7 @@ export default function ChangesSection({
       >
         {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
         <span className="flex-1 truncate">
-          {title} <span className="ml-1 text-vscode-fg-dim">{entries.length}</span>
+          {title} <span className="ml-1 text-vscode-fg-dim">{entries.length}</span>{titleSuffix && <span className={titleSuffixClassName}>{titleSuffix}</span>}
         </span>
         <button
           type="button"
