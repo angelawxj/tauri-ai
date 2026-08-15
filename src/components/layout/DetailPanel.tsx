@@ -7,6 +7,8 @@ import { useI18n } from "../../i18n";
 
 interface DetailPanelProps {
   onOpenDiff?: (path: string, staged: boolean) => void;
+  /** Remount key for the git/source-control panels; change it when the active project switches. */
+  projectKey?: string;
 }
 
 const WIDTH_STORAGE_KEY = "detailPanelWidth";
@@ -20,7 +22,7 @@ function readStoredWidth(): number {
   return Math.min(Math.max(raw, MIN_WIDTH), MAX_WIDTH);
 }
 
-export default function DetailPanel({ onOpenDiff }: DetailPanelProps) {
+export default function DetailPanel({ onOpenDiff, projectKey }: DetailPanelProps) {
   const { t } = useI18n();
   const [activeId, setActiveId] = useState("git");
   const [width, setWidth] = useState(readStoredWidth);
@@ -72,8 +74,8 @@ export default function DetailPanel({ onOpenDiff }: DetailPanelProps) {
       <div className="flex h-full min-w-0 flex-1 flex-col border-l border-vscode-border bg-vscode-panel">
         <TabBar tabs={TABS} activeId={activeId} onChange={setActiveId} />
         <div className="min-h-0 flex-1">
-          {activeId === "git" && <GitPanel />}
-          {activeId === "source-control" && <SourceControl onOpenDiff={onOpenDiff} />}
+          {activeId === "git" && <GitPanel key={projectKey} />}
+          {activeId === "source-control" && <SourceControl key={projectKey} onOpenDiff={onOpenDiff} />}
         </div>
       </div>
     </aside>

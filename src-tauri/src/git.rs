@@ -2,6 +2,8 @@ use git2::{BranchType, Delta, DiffOptions, IndexAddOption, Repository, Sort, Sta
 use serde::Serialize;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+use std::sync::Mutex;
+use tauri::State;
 
 #[derive(Serialize, Clone)]
 pub struct FileEntry {
@@ -63,16 +65,30 @@ pub struct BranchInfo {
     pub is_head: bool,
 }
 
-/// 固定管理当前项目自身的仓库：CARGO_MANIFEST_DIR 编译期即为 `<repo>/src-tauri`，取其父目录。
-fn repo_root() -> PathBuf {
+/// Holds the repo path the UI is currently pointed at. Defaults to this project's own
+/// repo (CARGO_MANIFEST_DIR's parent) so existing single-repo behavior keeps working
+/// until the user adds/selects another project from the sidebar.
+pub struct RepoState(pub Mutex<PathBuf>);
+
+impl RepoState {
+    pub fn new() -> Self {
+        RepoState(Mutex::new(default_repo_root()))
+    }
+}
+
+fn default_repo_root() -> PathBuf {
     Path::new(env!("CARGO_MANIFEST_DIR"))
         .parent()
         .expect("src-tauri should have a parent directory")
         .to_path_buf()
 }
 
-fn open_repo() -> Result<Repository, String> {
-    Repository::open(repo_root()).map_err(|e| e.to_string())
+fn repo_root(state: &State<RepoState>) -> PathBuf {
+    state.0.lock().expect("repo state poisoned").clone()
+}
+
+fn open_repo(state: &State<RepoState>) -> Result<Repository, String> {
+    Repository::open(repo_root(state)).map_err(|e| e.to_string())
 }
 
 fn status_char(s: Status, staged: bool) -> Option<&'static str> {
@@ -106,10 +122,10 @@ fn status_char(s: Status, staged: bool) -> Option<&'static str> {
     None
 }
 
-fn numstat(args: &[&str]) -> HashMap<String, (u32, u32)> {
+fn numstat(args: &[&str], root: &Path) -> HashMap<String, (u32, u32)> {
     let output = std::process::Command::new("git")
         .args(args)
-        .current_dir(repo_root())
+        .current_dir(root)
         .output();
     let Ok(output) = output else { return HashMap::new() };
     if !output.status.success() {
@@ -127,16 +143,26 @@ fn numstat(args: &[&str]) -> HashMap<String, (u32, u32)> {
         .collect()
 }
 
-fn untracked_numstat(path: &str) -> (u32, u32) {
-    let lines = std::fs::read_to_string(repo_root().join(path))
+fn untracked_numstat(path: &str, root: &Path) -> (u32, u32) {
+    let lines = std::fs::read_to_string(root.join(path))
         .map(|content| content.lines().count() as u32)
         .unwrap_or(0);
     (lines, 0)
 }
 
+/// Validates the given path is a git repository and switches the app's current project to it.
 #[tauri::command]
-pub fn git_status() -> Result<GitStatus, String> {
-    let repo = open_repo()?;
+pub fn set_current_project(path: String, state: State<RepoState>) -> Result<GitStatus, String> {
+    let candidate = PathBuf::from(&path);
+    Repository::open(&candidate).map_err(|e| e.to_string())?;
+    *state.0.lock().expect("repo state poisoned") = candidate;
+    git_status(state)
+}
+
+#[tauri::command]
+pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
+    let repo = open_repo(&state)?;
+    let root = repo_root(&state);
 
     let branch = match repo.head() {
         Ok(head) => head.shorthand().unwrap_or("HEAD").to_string(),
@@ -149,8 +175,8 @@ pub fn git_status() -> Result<GitStatus, String> {
 
     let mut staged = Vec::new();
     let mut unstaged = Vec::new();
-    let staged_numstat = numstat(&["diff", "--numstat", "--cached"]);
-    let unstaged_numstat = numstat(&["diff", "--numstat"]);
+    let staged_numstat = numstat(&["diff", "--numstat", "--cached"], &root);
+    let unstaged_numstat = numstat(&["diff", "--numstat"], &root);
 
     for entry in statuses.iter() {
         let s = entry.status();
@@ -169,7 +195,7 @@ pub fn git_status() -> Result<GitStatus, String> {
             });
         }
         if let Some(st) = status_char(s, false) {
-            let (additions, deletions) = if st == "U" { untracked_numstat(&path) } else { unstaged_numstat.get(&path).copied().unwrap_or((0, 0)) };
+            let (additions, deletions) = if st == "U" { untracked_numstat(&path, &root) } else { unstaged_numstat.get(&path).copied().unwrap_or((0, 0)) };
             unstaged.push(FileEntry {
                 path,
                 status: st.to_string(),
@@ -181,22 +207,22 @@ pub fn git_status() -> Result<GitStatus, String> {
 
     Ok(GitStatus {
         branch,
-        repo_name: repo_root()
+        repo_name: root
             .file_name()
             .and_then(|name| name.to_str())
             .unwrap_or("repository")
             .to_string(),
-        repo_path: repo_root().to_string_lossy().to_string(),
+        repo_path: root.to_string_lossy().to_string(),
         staged,
         unstaged,
     })
 }
 
 #[tauri::command]
-pub fn git_stage(path: String) -> Result<(), String> {
-    let repo = open_repo()?;
+pub fn git_stage(path: String, state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
-    let full = repo_root().join(&path);
+    let full = repo_root(&state).join(&path);
 
     if full.exists() {
         index.add_path(Path::new(&path)).map_err(|e| e.to_string())?;
@@ -209,8 +235,8 @@ pub fn git_stage(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_stage_all() -> Result<(), String> {
-    let repo = open_repo()?;
+pub fn git_stage_all(state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
     index
         .add_all(["*"].iter(), IndexAddOption::DEFAULT, None)
@@ -222,8 +248,8 @@ pub fn git_stage_all() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_unstage(path: String) -> Result<(), String> {
-    let repo = open_repo()?;
+pub fn git_unstage(path: String, state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
     let result = match repo.head() {
         Ok(head) => {
             let commit = head.peel_to_commit().map_err(|e| e.to_string())?;
@@ -243,8 +269,8 @@ pub fn git_unstage(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_unstage_all() -> Result<(), String> {
-    let repo = open_repo()?;
+pub fn git_unstage_all(state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
     let result = match repo.head() {
         Ok(head) => {
             let commit = head.peel_to_commit().map_err(|e| e.to_string())?;
@@ -261,9 +287,9 @@ pub fn git_unstage_all() -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_discard(path: String) -> Result<(), String> {
-    let repo = open_repo()?;
-    let full = repo_root().join(&path);
+pub fn git_discard(path: String, state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
+    let full = repo_root(&state).join(&path);
 
     let is_tracked = {
         let index = repo.index().map_err(|e| e.to_string())?;
@@ -283,8 +309,8 @@ pub fn git_discard(path: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn git_commit(message: String) -> Result<String, String> {
-    let repo = open_repo()?;
+pub fn git_commit(message: String, state: State<RepoState>) -> Result<String, String> {
+    let repo = open_repo(&state)?;
     let mut index = repo.index().map_err(|e| e.to_string())?;
     let tree_id = index.write_tree().map_err(|e| e.to_string())?;
     let tree = repo.find_tree(tree_id).map_err(|e| e.to_string())?;
@@ -304,8 +330,8 @@ pub fn git_commit(message: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
-    let repo = open_repo()?;
+pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>, String> {
+    let repo = open_repo(&state)?;
     let mut revwalk = repo.revwalk().map_err(|e| e.to_string())?;
     revwalk
         .set_sorting(Sort::TOPOLOGICAL | Sort::TIME)
@@ -366,8 +392,8 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
 /// The visible log remains HEAD/local-history only; upstream-only commits are represented
 /// by boundary rows in the renderer, using this merge-base information.
 #[tauri::command]
-pub fn git_history_context() -> Result<GitHistoryContext, String> {
-    let repo = open_repo()?;
+pub fn git_history_context(state: State<RepoState>) -> Result<GitHistoryContext, String> {
+    let repo = open_repo(&state)?;
     let head = match repo.head() {
         Ok(head) => head,
         Err(_) => {
@@ -442,8 +468,8 @@ pub fn git_history_context() -> Result<GitHistoryContext, String> {
 }
 
 #[tauri::command]
-pub fn git_commit_files(hash: String) -> Result<Vec<FileEntry>, String> {
-    let repo = open_repo()?;
+pub fn git_commit_files(hash: String, state: State<RepoState>) -> Result<Vec<FileEntry>, String> {
+    let repo = open_repo(&state)?;
     let oid = git2::Oid::from_str(&hash).map_err(|e| e.to_string())?;
     let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
     let tree = commit.tree().map_err(|e| e.to_string())?;
@@ -492,8 +518,8 @@ pub fn git_commit_files(hash: String) -> Result<Vec<FileEntry>, String> {
 /// 不走 libgit2 的 workdir diff：实测在这台机器上 `diff_index_to_workdir` 对未跟踪文件
 /// 返回的 delta 里 hunk 数始终是 0（size/exists 等元信息正常，就是读不到内容），
 /// 直接读文件内容自己拼输出更简单可靠。
-fn synthesize_new_file_diff(path: &str) -> Result<String, String> {
-    let full = repo_root().join(path);
+fn synthesize_new_file_diff(path: &str, root: &Path) -> Result<String, String> {
+    let full = root.join(path);
     let content = std::fs::read_to_string(&full).map_err(|e| e.to_string())?;
     let line_count = content.lines().count();
     let mut out = format!("diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n");
@@ -509,14 +535,14 @@ fn synthesize_new_file_diff(path: &str) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn git_diff(path: String, staged: bool) -> Result<String, String> {
-    let repo = open_repo()?;
+pub fn git_diff(path: String, staged: bool, state: State<RepoState>) -> Result<String, String> {
+    let repo = open_repo(&state)?;
 
     if !staged {
         let index = repo.index().map_err(|e| e.to_string())?;
         if index.get_path(Path::new(&path), 0).is_none() {
             // 不在暂存区里 = 未跟踪文件，走手写 diff
-            return synthesize_new_file_diff(&path);
+            return synthesize_new_file_diff(&path, &repo_root(&state));
         }
     }
 
@@ -555,8 +581,9 @@ pub fn git_diff(path: String, staged: bool) -> Result<String, String> {
 /// intentionally separate from the commit history list, matching Orca's
 /// "Committed Changes" source-control section.
 #[tauri::command]
-pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
-    let repo = open_repo()?;
+pub fn git_committed_files(state: State<RepoState>) -> Result<Vec<FileEntry>, String> {
+    let repo = open_repo(&state)?;
+    let root = repo_root(&state);
     let head = repo.head().map_err(|e| e.to_string())?;
     let head_oid = match head.target() {
         Some(oid) => oid,
@@ -585,7 +612,7 @@ pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
     let head_tree = repo.find_commit(head_oid).and_then(|commit| commit.tree()).map_err(|e| e.to_string())?;
     let diff = repo.diff_tree_to_tree(Some(&base_tree), Some(&head_tree), None).map_err(|e| e.to_string())?;
     let base_revision = base_oid.to_string();
-    let committed_numstat = numstat(&["diff", "--numstat", &base_revision, "HEAD"]);
+    let committed_numstat = numstat(&["diff", "--numstat", &base_revision, "HEAD"], &root);
     let mut files = Vec::new();
     for delta in diff.deltas() {
         let status = match delta.status() {
@@ -606,8 +633,8 @@ pub fn git_committed_files() -> Result<Vec<FileEntry>, String> {
 /// Returns one file's patch as introduced by a historical commit, compared with
 /// its first parent. This powers file clicks inside the lazy commit-history list.
 #[tauri::command]
-pub fn git_commit_diff(hash: String, path: String) -> Result<String, String> {
-    let repo = open_repo()?;
+pub fn git_commit_diff(hash: String, path: String, state: State<RepoState>) -> Result<String, String> {
+    let repo = open_repo(&state)?;
     let oid = git2::Oid::from_str(&hash).map_err(|e| e.to_string())?;
     let commit = repo.find_commit(oid).map_err(|e| e.to_string())?;
     let tree = commit.tree().map_err(|e| e.to_string())?;
@@ -635,8 +662,8 @@ pub fn git_commit_diff(hash: String, path: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn git_branches() -> Result<Vec<BranchInfo>, String> {
-    let repo = open_repo()?;
+pub fn git_branches(state: State<RepoState>) -> Result<Vec<BranchInfo>, String> {
+    let repo = open_repo(&state)?;
     let branches = repo
         .branches(Some(BranchType::Local))
         .map_err(|e| e.to_string())?;
@@ -658,12 +685,12 @@ pub fn git_branches() -> Result<Vec<BranchInfo>, String> {
 }
 
 #[tauri::command]
-pub fn git_push(branch: String) -> Result<String, String> {
+pub fn git_push(branch: String, state: State<RepoState>) -> Result<String, String> {
     // 走系统 git 而不是 git2 的 push API：这个仓库的 remote 是 SSH，直接调用系统 git
     // 能复用用户机器上已经配置好的 SSH agent / credential helper，不用在 Rust 里重新实现凭证逻辑。
     let output = std::process::Command::new("git")
         .args(["push", "origin", &branch])
-        .current_dir(repo_root())
+        .current_dir(repo_root(&state))
         .output()
         .map_err(|e| e.to_string())?;
 
@@ -676,10 +703,10 @@ pub fn git_push(branch: String) -> Result<String, String> {
     }
 }
 
-fn run_git(args: &[&str]) -> Result<String, String> {
+fn run_git(args: &[&str], root: &Path) -> Result<String, String> {
     let output = std::process::Command::new("git")
         .args(args)
-        .current_dir(repo_root())
+        .current_dir(root)
         .output()
         .map_err(|e| e.to_string())?;
     let stdout = String::from_utf8_lossy(&output.stdout).to_string();
@@ -692,28 +719,28 @@ fn run_git(args: &[&str]) -> Result<String, String> {
 }
 
 #[tauri::command]
-pub fn git_fetch() -> Result<String, String> {
-    run_git(&["fetch", "origin"])
+pub fn git_fetch(state: State<RepoState>) -> Result<String, String> {
+    run_git(&["fetch", "origin"], &repo_root(&state))
 }
 
 #[tauri::command]
-pub fn git_pull() -> Result<String, String> {
-    run_git(&["pull", "--ff-only"])
+pub fn git_pull(state: State<RepoState>) -> Result<String, String> {
+    run_git(&["pull", "--ff-only"], &repo_root(&state))
 }
 
 #[tauri::command]
-pub fn git_force_push(branch: String) -> Result<String, String> {
-    run_git(&["push", "--force-with-lease", "origin", &branch])
+pub fn git_force_push(branch: String, state: State<RepoState>) -> Result<String, String> {
+    run_git(&["push", "--force-with-lease", "origin", &branch], &repo_root(&state))
 }
 
 #[tauri::command]
-pub fn git_rebase_main() -> Result<String, String> {
-    run_git(&["rebase", "origin/main"])
+pub fn git_rebase_main(state: State<RepoState>) -> Result<String, String> {
+    run_git(&["rebase", "origin/main"], &repo_root(&state))
 }
 
 #[tauri::command]
-pub fn git_checkout_branch(name: String) -> Result<(), String> {
-    let repo = open_repo()?;
+pub fn git_checkout_branch(name: String, state: State<RepoState>) -> Result<(), String> {
+    let repo = open_repo(&state)?;
     let branch_ref = format!("refs/heads/{name}");
     let target = repo
         .revparse_single(&branch_ref)

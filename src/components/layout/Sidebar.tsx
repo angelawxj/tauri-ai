@@ -1,14 +1,31 @@
 import { useState } from "react";
 import { IconMoon, IconPlus, IconSearch, IconSettings, IconSun } from "../icons";
 import type { Theme } from "../../hooks/useTheme";
+import type { Project } from "../../hooks/useProjects";
 import { useI18n } from "../../i18n";
+import ProjectList from "./ProjectList";
 
 interface SidebarProps {
   theme: Theme;
   onToggleTheme: () => void;
+  projects: Project[];
+  activeProjectId: string | null;
+  onSelectProject: (id: string) => void;
+  onAddProject: () => void;
+  onRemoveProject: (id: string) => void;
+  projectError: string | null;
 }
 
-export default function Sidebar({ theme, onToggleTheme }: SidebarProps) {
+export default function Sidebar({
+  theme,
+  onToggleTheme,
+  projects,
+  activeProjectId,
+  onSelectProject,
+  onAddProject,
+  onRemoveProject,
+  projectError,
+}: SidebarProps) {
   const { t, lang, toggleLang } = useI18n();
   const [activeId, setActiveId] = useState("1");
 
@@ -26,6 +43,15 @@ export default function Sidebar({ theme, onToggleTheme }: SidebarProps) {
           <IconSearch size={14} />
         </button>
       </div>
+
+      <ProjectList
+        projects={projects}
+        activeProjectId={activeProjectId}
+        onSelect={onSelectProject}
+        onAdd={onAddProject}
+        onRemove={onRemoveProject}
+        error={projectError}
+      />
 
       <div className="px-3 pb-2">
         <button

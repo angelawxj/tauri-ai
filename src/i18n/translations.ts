@@ -25,6 +25,11 @@ export interface TranslationDict {
     switchToDarkTheme: string;
     settings: string;
     mockSessions: MockSession[];
+    projects: string;
+    addProject: string;
+    noProjects: string;
+    removeProject: string;
+    confirmRemoveProject: (name: string) => string;
   };
   chat: {
     modelPreviewNote: string;
@@ -135,6 +140,11 @@ const zh: TranslationDict = {
       { id: "4", title: "生成提交信息文案", time: "周二" },
       { id: "5", title: "Tailwind v4 主题变量迁移", time: "上周" },
     ],
+    projects: "项目",
+    addProject: "添加项目",
+    noProjects: "还没有项目，点击上方 + 添加本地 Git 仓库",
+    removeProject: "移除项目",
+    confirmRemoveProject: (name) => `确定要移除项目「${name}」吗？（不会删除本地文件）`,
   },
   chat: {
     modelPreviewNote: "UI 预览 · 未接入真实模型",
@@ -254,6 +264,11 @@ const en: TranslationDict = {
       { id: "4", title: "Generate commit message copy", time: "Tue" },
       { id: "5", title: "Tailwind v4 theme variable migration", time: "Last week" },
     ],
+    projects: "Projects",
+    addProject: "Add Project",
+    noProjects: "No projects yet — click + above to add a local Git repository",
+    removeProject: "Remove project",
+    confirmRemoveProject: (name) => `Remove project "${name}"? (local files are untouched)`,
   },
   chat: {
     modelPreviewNote: "UI preview · not connected to a real model",

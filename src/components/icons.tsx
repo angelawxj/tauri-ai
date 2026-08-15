@@ -173,6 +173,14 @@ export function IconUpload({ size = 16, className }: IconProps) {
   );
 }
 
+export function IconFolder({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M2 4.2c0-.66.54-1.2 1.2-1.2h3l1.3 1.6h5.3c.66 0 1.2.54 1.2 1.2v6.4c0 .66-.54 1.2-1.2 1.2H3.2A1.2 1.2 0 0 1 2 11.4Z" />
+    </svg>
+  );
+}
+
 export function IconX({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>

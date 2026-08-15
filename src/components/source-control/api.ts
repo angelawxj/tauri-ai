@@ -29,6 +29,7 @@ export function isApiUnavailable(error: unknown): boolean {
 
 export const api = {
   status: () => call<GitStatus>("git_status"),
+  setCurrentProject: (path: string) => call<GitStatus>("set_current_project", { path }),
   stage: (path: string) => call<void>("git_stage", { path }),
   stageAll: () => call<void>("git_stage_all"),
   unstage: (path: string) => call<void>("git_unstage", { path }),

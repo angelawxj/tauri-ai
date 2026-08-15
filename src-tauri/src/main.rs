@@ -4,7 +4,10 @@ mod git;
 
 fn main() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .manage(git::RepoState::new())
         .invoke_handler(tauri::generate_handler![
+            git::set_current_project,
             git::git_status,
             git::git_stage,
             git::git_stage_all,
