@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { IconCheck, IconChevronDown, IconPlus, IconUpload } from "../icons";
+import { IconCheck, IconChevronDown, IconPlus, IconRefresh, IconUpload } from "../icons";
 import { useI18n } from "../../i18n";
 
 interface CommitBoxProps {
@@ -88,14 +88,14 @@ export default function CommitBox({
       />
       <div className="relative flex items-stretch">
         <button type="button" onClick={onCommit} disabled={!canCommit || committing} title={canCommit ? actionTitle ?? t.git.commitTitle : disabledReason} className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45 ${hasMoreActions ? "rounded-l-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover" : "rounded-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover"}`}>
-          {actionKind === "publish" ? <IconUpload size={13} /> : actionKind === "stage" ? <IconPlus size={13} /> : <IconCheck size={13} />}
-          {committing ? t.git.committing : actionLabel ?? t.git.commit}
+          {committing ? <IconRefresh size={13} className="animate-spin" /> : actionKind === "publish" ? <IconUpload size={13} /> : actionKind === "stage" ? <IconPlus size={13} /> : <IconCheck size={13} />}
+          {committing ? actionLabel ?? t.git.committing : actionLabel ?? t.git.commit}
         </button>
-        {hasMoreActions && <button ref={menuButtonRef} type="button" aria-label={t.git.moreCommitActions} title={t.git.moreCommitActions} onClick={() => {
+        {hasMoreActions && <button ref={menuButtonRef} type="button" disabled={committing} aria-label={t.git.moreCommitActions} title={t.git.moreCommitActions} onClick={() => {
           const rect = menuButtonRef.current?.getBoundingClientRect();
           if (rect) setMenuPosition({ left: Math.max(8, Math.min(rect.right - 240, window.innerWidth - 248)), top: rect.bottom + 4 });
           setMenuOpen((open) => !open);
-        }} className="w-10 rounded-r-md border border-vscode-button bg-vscode-button px-2 text-vscode-button-fg hover:bg-vscode-button-hover"><IconChevronDown size={13} /></button>}
+        }} className="w-10 rounded-r-md border border-vscode-button bg-vscode-button px-2 text-vscode-button-fg hover:bg-vscode-button-hover disabled:cursor-not-allowed disabled:opacity-45"><IconChevronDown size={13} /></button>}
       </div>
       {menuOpen && menuPosition && createPortal(
         <div ref={menuRef} role="menu" className="fixed z-[100] min-w-60 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-xl" style={menuPosition}>

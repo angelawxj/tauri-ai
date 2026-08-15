@@ -75,7 +75,6 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
 
   const handlePush = async () => {
     if (!status?.branch || pushing) return;
-    if (!window.confirm(t.git.confirmPush(status.branch))) return;
     setPushing(true);
     await withErrorHandling(async () => {
       await api.push(status.branch);
@@ -155,7 +154,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           }}
           canCommit={canCommit || canStageAll || canPushIdle}
           disabledReason={canStageAll || canPushIdle ? "" : disabledReason}
-          committing={committing}
+          committing={committing || pushing}
           actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllChanges : undefined}
           actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
           actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
