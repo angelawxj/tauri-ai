@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { IconX } from "../icons";
-import { DiffTab, type OpenDiffRequest } from "../source-control";
+import { DiffTab, type OpenDiffRequest } from "../../features/source-control";
 import { useI18n } from "../../i18n";
 import ChatArea from "./ChatArea";
 

@@ -1,6 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { BranchInfo, CommitInfo, FileEntry, GitHistoryContext, GitStatus } from "./types";
-import { detectLanguage, translations } from "../../i18n";
+import { detectSourceControlLanguage, sourceControlTranslations } from "./i18n";
 
 const NOT_TAURI = "NOT_TAURI";
 
@@ -18,7 +18,7 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
     return await invoke<T>(cmd, args);
   } catch (err) {
     const message =
-      typeof err === "string" ? err : err instanceof Error ? err.message : translations[detectLanguage()].common.unknownError;
+      typeof err === "string" ? err : err instanceof Error ? err.message : sourceControlTranslations[detectSourceControlLanguage()].common.unknownError;
     throw new SourceControlApiError(message);
   }
 }

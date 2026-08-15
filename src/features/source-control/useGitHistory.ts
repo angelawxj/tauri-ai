@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { CommitInfo, FileEntry, GitHistoryContext } from "./types";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface UseGitHistoryResult {
   commits: CommitInfo[];
@@ -18,7 +18,7 @@ interface UseGitHistoryResult {
 
 /** bump `refreshSignal` (e.g. right after a commit) to force a re-fetch */
 export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [commits, setCommits] = useState<CommitInfo[]>([]);
   const [context, setContext] = useState<GitHistoryContext>();
   const [loading, setLoading] = useState(true);

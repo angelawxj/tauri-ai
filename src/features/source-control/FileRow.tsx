@@ -1,7 +1,7 @@
-import { IconCommitFile, IconMinus, IconPlus, IconUndo } from "../icons";
+import { IconCommitFile, IconMinus, IconPlus, IconUndo } from "./icons";
 import { STATUS_COLOR_CLASS, STATUS_LABELS } from "./status";
 import type { FileEntry } from "./types";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 function splitPath(path: string): { dir: string; name: string } {
   const idx = path.lastIndexOf("/");
@@ -27,7 +27,7 @@ export default function FileRow({
   onDiscard,
   onOpenDiff,
 }: FileRowProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const { dir, name } = splitPath(entry.path);
   const colorClass = STATUS_COLOR_CLASS[entry.status];
   const iconColorClass = variant === "conflict" ? "text-git-modified" : colorClass;

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { BranchInfo } from "./types";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface UseBranchesResult {
   branches: BranchInfo[];
@@ -14,7 +14,7 @@ interface UseBranchesResult {
 }
 
 export function useBranches(): UseBranchesResult {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

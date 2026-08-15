@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { GitStatus } from "./types";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface UseGitStatusResult {
   status: GitStatus | null;
@@ -13,7 +13,7 @@ interface UseGitStatusResult {
 }
 
 export function useGitStatus(): UseGitStatusResult {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -24,6 +24,9 @@ export function useGitStatus(): UseGitStatusResult {
     left?.branch === right.branch &&
     left.head === right.head &&
     left.upstreamHead === right.upstreamHead &&
+    left.hasUpstream === right.hasUpstream &&
+    left.ahead === right.ahead &&
+    left.behind === right.behind &&
     left.repoName === right.repoName &&
     left.repoPath === right.repoPath &&
     JSON.stringify(left.staged) === JSON.stringify(right.staged) &&

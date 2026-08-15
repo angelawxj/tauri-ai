@@ -13,6 +13,9 @@ export interface GitStatus {
   head?: string | null;
   /** Tracked upstream revision; changes after external push/fetch. */
   upstreamHead?: string | null;
+  hasUpstream?: boolean;
+  ahead?: number;
+  behind?: number;
   repoName: string;
   repoPath: string;
   staged: FileEntry[];

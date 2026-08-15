@@ -1,9 +1,9 @@
 import { useCallback, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
-import { IconChevronDown, IconChevronRight, IconRefresh } from "../icons";
+import { IconChevronDown, IconChevronRight, IconRefresh } from "./icons";
 import { computeSwimlanes } from "./commit-graph";
 import { useGitHistory } from "./useGitHistory";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 import CommitRow from "./CommitRow";
 import BoundaryRow from "./BoundaryRow";
 
@@ -22,7 +22,7 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: HistoryPanelProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const { commits, context, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
     useGitHistory(refreshSignal);
   const [collapsed, setCollapsed] = useState(false);

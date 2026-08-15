@@ -5,8 +5,8 @@ import MainArea from "./components/layout/MainArea";
 import DetailPanel from "./components/layout/DetailPanel";
 import { useTheme } from "./hooks/useTheme";
 import { useProjects } from "./hooks/useProjects";
-import { api } from "./components/source-control/api";
-import type { OpenDiffRequest } from "./components/source-control";
+import { api } from "./features/source-control/api";
+import type { OpenDiffRequest } from "./features/source-control";
 
 export default function App() {
   const [theme, toggleTheme] = useTheme();

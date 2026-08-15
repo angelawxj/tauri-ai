@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { IconChevronDown, IconChevronRight, IconMinus, IconPlus, IconUndo } from "../icons";
+import { IconChevronDown, IconChevronRight, IconMinus, IconPlus, IconUndo } from "./icons";
 import FileRow from "./FileRow";
 import type { FileEntry } from "./types";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface ChangesSectionProps {
   title: string;
@@ -33,7 +33,7 @@ export default function ChangesSection({
   onDiscardAll,
   onOpenDiff,
 }: ChangesSectionProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [collapsed, setCollapsed] = useState(false);
 
   if (entries.length === 0) return null;
@@ -44,7 +44,7 @@ export default function ChangesSection({
         role="button"
         tabIndex={0}
         onClick={() => setCollapsed((c) => !c)}
-        className="group relative flex w-full items-center gap-1 px-3 pb-1 pt-2 text-[12px] font-semibold tracking-normal text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
+        className="group relative flex w-full items-center gap-1 px-3 pb-1 pt-4 text-[12px] font-semibold tracking-normal text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
       >
         {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
         <span className="flex-1 truncate">

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { IconChevronDown, IconGitBranch, IconSearch } from "../icons";
+import { IconChevronDown, IconGitBranch, IconSearch } from "./icons";
 import { useBranches } from "./useBranches";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface BranchSwitcherProps {
   currentBranch: string;
@@ -9,7 +9,7 @@ interface BranchSwitcherProps {
 }
 
 export default function BranchSwitcher({ currentBranch, onCheckedOut }: BranchSwitcherProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const { branches, unavailable, checkout, checkingOut, error } = useBranches();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");

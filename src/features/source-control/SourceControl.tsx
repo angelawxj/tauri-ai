@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { IconGitMerge, IconRefresh, IconSearch, IconSparkle, IconUpload, IconX } from "../icons";
+import { IconGitMerge, IconRefresh, IconSearch, IconSparkle, IconUpload, IconX } from "./icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
+import "./theme.css";
 import BranchSwitcher from "./BranchSwitcher";
 import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
@@ -15,7 +16,7 @@ interface SourceControlProps {
 }
 
 export default function SourceControl({ onOpenDiff }: SourceControlProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const { status, loading, error, unavailable, refresh } = useGitStatus();
   const [message, setMessage] = useState("");
   const [committing, setCommitting] = useState(false);
@@ -50,6 +51,16 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const canCommit = !unavailable && conflicts.length === 0 && message.trim().length > 0 && staged.length > 0;
   const canStageAll = !unavailable && conflicts.length === 0 && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
   const canPushIdle = !unavailable && conflicts.length === 0 && hasOutgoingChanges && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
+  // Orca keeps remote actions visible. They are only disabled when there is no
+  // usable branch/upstream or another source-control operation is active.
+  const hasCurrentBranch = Boolean(status?.branch) && status?.branch !== "HEAD" && status?.branch !== "(无提交)";
+  const remoteActionReady = !unavailable && conflicts.length === 0 && hasCurrentBranch && !committing && !pushing;
+  const canPush = remoteActionReady;
+  const canPull = remoteActionReady && Boolean(status?.hasUpstream);
+  const canSync = canPull;
+  const canRebase = remoteActionReady && Boolean(baseRefName?.includes("/"));
+  const canFetch = !unavailable && !committing && !pushing;
+  const canCommitAndPush = canCommit && canPush && Boolean(status?.hasUpstream);
   // Match Orca: hide the composer only for the true empty state. A branch can
   // be clean locally but still have committed branch changes to review.
   const showGenericEmptyState = !unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && committedFiles.length === 0;
@@ -191,7 +202,13 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
     actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
     onPush={() => void handlePush()}
-    canPush={!unavailable && Boolean(status?.branch)}
+    canPush={canPush}
+    canForcePush={canPush}
+    canPull={canPull}
+    canSync={canSync}
+    canRebase={canRebase}
+    canFetch={canFetch}
+    canCommitAndPush={canCommitAndPush}
     onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
     canStageAll={canStageAll}
     onFetch={() => void runRemoteAction(() => api.fetch())}
@@ -203,7 +220,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   /> : null;
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
+    <div className="source-control-theme flex h-full flex-col overflow-hidden bg-vscode-bg">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border bg-vscode-bg px-3">
         {filterOpen ? (
           <div className="flex min-w-0 flex-1 items-center gap-2">

@@ -1,4 +1,4 @@
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 interface DiffViewProps {
   patch: string | null;
@@ -15,7 +15,7 @@ function lineClass(line: string): string {
 }
 
 export default function DiffView({ patch, loading, error }: DiffViewProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   return (
     <div className="px-3 py-2 font-mono text-[12.5px] leading-[1.6]">
       {loading && <div className="px-1 py-1 text-vscode-fg-dim">{t.git.loadingDiff}</div>}

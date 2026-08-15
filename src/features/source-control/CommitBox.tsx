@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { createPortal } from "react-dom";
-import { IconCheck, IconChevronDown, IconPlus, IconRefresh, IconUpload } from "../icons";
-import { useI18n } from "../../i18n";
+import { IconCheck, IconChevronDown, IconPlus, IconRefresh, IconUpload } from "./icons";
+import { useSourceControlI18n } from "./i18n";
 
 interface CommitBoxProps {
   message: string;
@@ -16,6 +16,12 @@ interface CommitBoxProps {
   actionKind?: "commit" | "stage" | "publish";
   onPush?: () => void;
   canPush?: boolean;
+  canForcePush?: boolean;
+  canPull?: boolean;
+  canSync?: boolean;
+  canRebase?: boolean;
+  canFetch?: boolean;
+  canCommitAndPush?: boolean;
   onStageAll?: () => void;
   canStageAll?: boolean;
   onFetch?: () => void;
@@ -39,6 +45,12 @@ export default function CommitBox({
   actionKind = "commit",
   onPush,
   canPush = false,
+  canForcePush = false,
+  canPull = false,
+  canSync = false,
+  canRebase = false,
+  canFetch = false,
+  canCommitAndPush = false,
   onStageAll,
   canStageAll = false,
   onFetch,
@@ -48,7 +60,7 @@ export default function CommitBox({
   onRebaseMain,
   onCommitAndPush,
 }: CommitBoxProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [menuOpen, setMenuOpen] = useState(false);
   const [menuPosition, setMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const menuButtonRef = useRef<HTMLButtonElement>(null);
@@ -102,16 +114,16 @@ export default function CommitBox({
       {menuOpen && menuPosition && createPortal(
         <div ref={menuRef} role="menu" className="fixed z-[100] min-w-60 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-xl" style={menuPosition}>
           <button type="button" disabled={!canCommit} onClick={() => { setMenuOpen(false); onCommit(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.commit}</button>
-          <button type="button" disabled={!canCommit || !onCommitAndPush} onClick={() => { setMenuOpen(false); onCommitAndPush?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.commitAndPush}</button>
+          <button type="button" disabled={!canCommitAndPush || !onCommitAndPush} onClick={() => { setMenuOpen(false); onCommitAndPush?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.commitAndPush}</button>
           <div className="my-1 border-t border-vscode-border" />
-          {canPush && onPush && <button type="button" onClick={() => { setMenuOpen(false); onPush(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.push}</button>}
-          {canPush && onForcePush && <button type="button" onClick={() => { setMenuOpen(false); onForcePush(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-git-deleted hover:bg-vscode-list-hover">{t.git.forcePush}</button>}
-          {onPull && <button type="button" onClick={() => { setMenuOpen(false); onPull(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.pull}</button>}
-          {onPull && <button type="button" onClick={() => { setMenuOpen(false); onPull(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.fastForward}</button>}
-          {onSync && <button type="button" onClick={() => { setMenuOpen(false); onSync(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.sync}</button>}
-          {onRebaseMain && <button type="button" onClick={() => { setMenuOpen(false); onRebaseMain(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.rebaseMain}</button>}
-          {onFetch && <button type="button" onClick={() => { setMenuOpen(false); onFetch(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.fetch}</button>}
-          {canStageAll && onStageAll && <button type="button" onClick={() => { setMenuOpen(false); onStageAll(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">{t.git.stageAllChanges}</button>}
+          <button type="button" disabled={!canPush || !onPush} onClick={() => { setMenuOpen(false); onPush?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.push}</button>
+          <button type="button" disabled={!canForcePush || !onForcePush} onClick={() => { setMenuOpen(false); onForcePush?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.forcePush}</button>
+          <button type="button" disabled={!canPull || !onPull} onClick={() => { setMenuOpen(false); onPull?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.pull}</button>
+          <button type="button" disabled={!canPull || !onPull} onClick={() => { setMenuOpen(false); onPull?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.fastForward}</button>
+          <button type="button" disabled={!canSync || !onSync} onClick={() => { setMenuOpen(false); onSync?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.sync}</button>
+          <button type="button" disabled={!canRebase || !onRebaseMain} onClick={() => { setMenuOpen(false); onRebaseMain?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.rebaseMain}</button>
+          <button type="button" disabled={!canFetch || !onFetch} onClick={() => { setMenuOpen(false); onFetch?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.fetch}</button>
+          <button type="button" disabled={!canStageAll || !onStageAll} onClick={() => { setMenuOpen(false); onStageAll?.(); }} className="flex w-full px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-45">{t.git.stageAllChanges}</button>
         </div>,
         document.body,
       )}

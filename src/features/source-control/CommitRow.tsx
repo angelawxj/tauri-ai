@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { IconChevronDown, IconChevronRight, IconCommitFile } from "../icons";
+import { IconChevronDown, IconChevronRight, IconCommitFile } from "./icons";
 import type { GraphRow } from "./commit-graph";
 import type { CommitInfo, FileEntry } from "./types";
 import CommitGraph from "./CommitGraph";
 import { STATUS_COLOR_CLASS, STATUS_LABELS } from "./status";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 
 export const ROW_HEIGHT = 26;
 const MAX_VISIBLE_REFS = 2;
@@ -50,7 +50,7 @@ function refClass(name: string, isHead: boolean, baseRefName?: string): string {
 }
 
 export default function CommitRow({ commit, graphRow, maxLanes, isHead, baseRefName, expanded, onToggle, files, filesLoading, onOpenFile }: CommitRowProps) {
-  const { lang, t } = useI18n();
+  const { lang, t } = useSourceControlI18n();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const subject = commit.message.split("\n")[0];
   const visibleRefs = commit.refs.slice(0, MAX_VISIBLE_REFS);

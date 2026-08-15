@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { IconX } from "../icons";
+import { IconX } from "./icons";
 import { api, isApiUnavailable } from "./api";
-import { useI18n } from "../../i18n";
+import { useSourceControlI18n } from "./i18n";
 import DiffView from "./DiffView";
 
 interface DiffTabProps {
@@ -12,7 +12,7 @@ interface DiffTabProps {
 }
 
 export default function DiffTab({ path, staged, commitHash, onClose }: DiffTabProps) {
-  const { t } = useI18n();
+  const { t } = useSourceControlI18n();
   const [diff, setDiff] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

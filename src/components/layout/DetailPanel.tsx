@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import TabBar, { type TabDef } from "./TabBar";
 import { GitPanel } from "../git";
-import { SourceControl } from "../source-control";
+import { SourceControl } from "../../features/source-control";
 import { useI18n } from "../../i18n";
 
 interface DetailPanelProps {

@@ -23,6 +23,10 @@ pub struct GitStatus {
     /// when HEAD and the working tree remain unchanged.
     #[serde(rename = "upstreamHead")]
     pub upstream_head: Option<String>,
+    #[serde(rename = "hasUpstream")]
+    pub has_upstream: bool,
+    pub ahead: usize,
+    pub behind: usize,
     #[serde(rename = "repoName")]
     pub repo_name: String,
     #[serde(rename = "repoPath")]
@@ -181,12 +185,17 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
         Err(_) => ("(无提交)".to_string(), None),
     };
 
-    let upstream_head = repo
+    let upstream = repo
         .find_branch(&branch, BranchType::Local)
         .ok()
-        .and_then(|local| local.upstream().ok())
-        .and_then(|upstream| upstream.get().target())
-        .map(|oid| oid.to_string());
+        .and_then(|local| local.upstream().ok());
+    let upstream_head = upstream
+        .as_ref()
+        .and_then(|upstream| upstream.get().target());
+    let (ahead, behind) = match (repo.head().ok().and_then(|reference| reference.target()), upstream_head) {
+        (Some(head_oid), Some(upstream_oid)) => repo.graph_ahead_behind(head_oid, upstream_oid).unwrap_or((0, 0)),
+        _ => (0, 0),
+    };
 
     let mut opts = git2::StatusOptions::new();
     opts.include_untracked(true).recurse_untracked_dirs(true);
@@ -237,7 +246,10 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
     Ok(GitStatus {
         branch,
         head,
-        upstream_head,
+        upstream_head: upstream_head.map(|oid| oid.to_string()),
+        has_upstream: upstream.is_some(),
+        ahead,
+        behind,
         repo_name: root
             .file_name()
             .and_then(|name| name.to_str())

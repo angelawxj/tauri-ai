@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { IconChevronDown, IconChevronRight } from "../icons";
+import { IconChevronDown, IconChevronRight } from "./icons";
 import FileRow from "./FileRow";
 import type { FileEntry } from "./types";
 
