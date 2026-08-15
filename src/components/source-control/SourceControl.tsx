@@ -171,6 +171,37 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     if (firstConflict) onOpenDiff?.(firstConflict.path, false);
   };
 
+  const commitBox = conflicts.length === 0 ? <CommitBox
+    message={message}
+    onMessageChange={setMessage}
+    showMessage={!showGenericEmptyState}
+    onCommit={() => {
+      if (canStageAll) {
+        void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
+      } else if (canPushIdle) {
+        void handlePush();
+      } else {
+        void handleCommit();
+      }
+    }}
+    canCommit={canCommit || canStageAll || canPushIdle}
+    disabledReason={canStageAll || canPushIdle ? "" : disabledReason}
+    committing={committing || pushing}
+    actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllShort : undefined}
+    actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
+    actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
+    onPush={() => void handlePush()}
+    canPush={!unavailable && Boolean(status?.branch)}
+    onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
+    canStageAll={canStageAll}
+    onFetch={() => void runRemoteAction(() => api.fetch())}
+    onPull={() => void runRemoteAction(() => api.pull())}
+    onForcePush={handleForcePush}
+    onSync={() => void runRemoteAction(async () => { await api.pull(); if (status?.branch) await api.push(status.branch); })}
+    onRebaseMain={handleRebaseMain}
+    onCommitAndPush={() => void handleCommitAndPush()}
+  /> : null;
+
   return (
     <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
       <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border bg-vscode-bg px-3">
@@ -220,36 +251,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
             </div>
           </div>
         )}
-        {conflicts.length === 0 && <CommitBox
-          message={message}
-          onMessageChange={setMessage}
-          showMessage={!showGenericEmptyState}
-          onCommit={() => {
-            if (canStageAll) {
-              void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
-            } else if (canPushIdle) {
-              void handlePush();
-            } else {
-              void handleCommit();
-            }
-          }}
-          canCommit={canCommit || canStageAll || canPushIdle}
-          disabledReason={canStageAll || canPushIdle ? "" : disabledReason}
-          committing={committing || pushing}
-          actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllShort : undefined}
-          actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
-          actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
-          onPush={() => void handlePush()}
-          canPush={!unavailable && Boolean(status?.branch)}
-          onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
-          canStageAll={canStageAll}
-          onFetch={() => void runRemoteAction(() => api.fetch())}
-          onPull={() => void runRemoteAction(() => api.pull())}
-          onForcePush={handleForcePush}
-          onSync={() => void runRemoteAction(async () => { await api.pull(); if (status?.branch) await api.push(status.branch); })}
-          onRebaseMain={handleRebaseMain}
-          onCommitAndPush={() => void handleCommitAndPush()}
-        />}
+        {!showGenericEmptyState && commitBox}
 
         {unavailable && (
           <div className="px-3 py-3 text-[12px] leading-relaxed text-vscode-fg-dim">
@@ -266,10 +268,13 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
         )}
 
         {showGenericEmptyState && (
-          <div className="px-4 py-6">
-            <div className="text-sm font-medium text-vscode-fg">{t.git.noChangesHeading}</div>
-            <div className="mt-1 text-[12px] text-vscode-fg-dim">{t.git.noChangesSupportingText(baseRefName ?? t.git.baseRefFallback)}</div>
-          </div>
+          <>
+            <div className="px-4 py-6">
+              <div className="text-sm font-medium text-vscode-fg">{t.git.noChangesHeading}</div>
+              <div className="mt-1 text-[12px] text-vscode-fg-dim">{t.git.noChangesSupportingText(baseRefName ?? t.git.baseRefFallback)}</div>
+            </div>
+            {commitBox}
+          </>
         )}
 
         {!unavailable && !error && (

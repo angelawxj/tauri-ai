@@ -363,15 +363,16 @@ pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>,
 
     // Orca avoids rendering origin/dev and dev as two separate reference chips.
     // Keep remote-only branches, but drop a remote ref when its local peer exists.
-    let local_ref_names: HashSet<String> = repo
+    let local_refs: HashMap<String, git2::Oid> = repo
         .references()
         .map_err(|e| e.to_string())?
         .filter_map(|reference| {
             let reference = reference.ok()?;
+            let target = reference.target()?;
             reference
                 .name()?
                 .strip_prefix("refs/heads/")
-                .map(str::to_string)
+                .map(|name| (name.to_string(), target))
         })
         .collect();
 
@@ -386,7 +387,9 @@ pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>,
         }
         if let Some(remote_name) = name.strip_prefix("refs/remotes/") {
             if let Some((_, local_peer)) = remote_name.split_once('/') {
-                if local_ref_names.contains(local_peer) {
+                // Hide only true duplicates.  When local dev is ahead of
+                // origin/dev, Orca shows both chips on their respective commits.
+                if local_refs.get(local_peer) == r.target().as_ref() {
                     continue;
                 }
             }
