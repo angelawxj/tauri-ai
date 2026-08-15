@@ -7,28 +7,26 @@ interface ChangesSectionProps {
   title: string;
   entries: FileEntry[];
   variant: "staged" | "unstaged";
-  selectedPath?: string | null;
-  onSelect: (path: string) => void;
   onStage?: (path: string) => void;
   onUnstage?: (path: string) => void;
   onDiscard?: (path: string) => void;
   onStageAll?: () => void;
   onUnstageAll?: () => void;
   onDiscardAll?: () => void;
+  onOpenDiff?: (path: string, staged: boolean) => void;
 }
 
 export default function ChangesSection({
   title,
   entries,
   variant,
-  selectedPath,
-  onSelect,
   onStage,
   onUnstage,
   onDiscard,
   onStageAll,
   onUnstageAll,
   onDiscardAll,
+  onOpenDiff,
 }: ChangesSectionProps) {
   const [collapsed, setCollapsed] = useState(false);
 
@@ -96,11 +94,10 @@ export default function ChangesSection({
               key={entry.path}
               entry={entry}
               variant={variant}
-              selected={entry.path === selectedPath}
-              onSelect={onSelect}
               onStage={onStage}
               onUnstage={onUnstage}
               onDiscard={onDiscard}
+              onOpenDiff={onOpenDiff}
             />
           ))}
         </div>

@@ -1,0 +1,42 @@
+import { invoke } from "@tauri-apps/api/core";
+import type { BranchInfo, CommitInfo, FileEntry, GitStatus } from "./types";
+
+const NOT_TAURI = "NOT_TAURI";
+
+export class SourceControlApiError extends Error {}
+
+function isTauriRuntime(): boolean {
+  return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
+}
+
+async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+  if (!isTauriRuntime()) {
+    throw new SourceControlApiError(NOT_TAURI);
+  }
+  try {
+    return await invoke<T>(cmd, args);
+  } catch (err) {
+    const message = typeof err === "string" ? err : err instanceof Error ? err.message : "未知错误";
+    throw new SourceControlApiError(message);
+  }
+}
+
+export function isApiUnavailable(error: unknown): boolean {
+  return error instanceof SourceControlApiError && error.message === NOT_TAURI;
+}
+
+export const api = {
+  status: () => call<GitStatus>("git_status"),
+  stage: (path: string) => call<void>("git_stage", { path }),
+  stageAll: () => call<void>("git_stage_all"),
+  unstage: (path: string) => call<void>("git_unstage", { path }),
+  unstageAll: () => call<void>("git_unstage_all"),
+  discard: (path: string) => call<void>("git_discard", { path }),
+  commit: (message: string) => call<string>("git_commit", { message }),
+  log: (limit = 50) => call<CommitInfo[]>("git_log", { limit }),
+  commitFiles: (hash: string) => call<FileEntry[]>("git_commit_files", { hash }),
+  diff: (path: string, staged: boolean) => call<string>("git_diff", { path, staged }),
+  branches: () => call<BranchInfo[]>("git_branches"),
+  checkoutBranch: (name: string) => call<void>("git_checkout_branch", { name }),
+  push: (branch: string) => call<string>("git_push", { branch }),
+};

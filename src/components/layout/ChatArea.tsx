@@ -50,7 +50,7 @@ export default function ChatArea() {
   };
 
   return (
-    <main className="flex min-w-0 flex-1 flex-col bg-vscode-bg">
+    <div className="flex h-full min-h-0 flex-col bg-vscode-bg">
       <header className="flex h-10 shrink-0 items-center justify-between border-b border-vscode-border px-4">
         <span className="text-[12.5px] text-vscode-fg-muted">Claude Sonnet 5</span>
         <span className="text-[11px] text-vscode-fg-dim">UI 预览 · 未接入真实模型</span>
@@ -106,6 +106,6 @@ export default function ChatArea() {
           </button>
         </div>
       </div>
-    </main>
+    </div>
   );
 }

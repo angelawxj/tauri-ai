@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { gitApi, isGitApiUnavailable } from "../lib/git-api";
-import type { GitStatus } from "../types/git";
+import { api, isApiUnavailable } from "./api";
+import type { GitStatus } from "./types";
 
 interface UseGitStatusResult {
   status: GitStatus | null;
@@ -20,12 +20,12 @@ export function useGitStatus(): UseGitStatusResult {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const next = await gitApi.status();
+      const next = await api.status();
       setStatus(next);
       setError(null);
       setUnavailable(false);
     } catch (err) {
-      if (isGitApiUnavailable(err)) {
+      if (isApiUnavailable(err)) {
         setUnavailable(true);
         setError(null);
       } else {

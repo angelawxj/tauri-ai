@@ -1,4 +1,4 @@
-import type { CommitInfo } from "../types/git";
+import type { CommitInfo } from "./types";
 
 /** VSCode Graph 风格的分支线颜色循环 */
 export const GRAPH_PALETTE = [

@@ -39,6 +39,41 @@
   --font-mono: "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
 }
 
+/* VSCode Light+ 主题色板，通过 <html data-theme="light"> 启用，见 src/hooks/useTheme.ts */
+:root[data-theme="light"] {
+  --color-vscode-bg: #ffffff;
+  --color-vscode-sidebar: #f3f3f3;
+  --color-vscode-activitybar: #2c2c2c;
+  --color-vscode-titlebar: #dddddd;
+  --color-vscode-panel: #f3f3f3;
+  --color-vscode-panel-header: #ececec;
+  --color-vscode-border: #e0e0e0;
+  --color-vscode-border-light: #c8c8c8;
+  --color-vscode-fg: #3b3b3b;
+  --color-vscode-fg-muted: #6e6e6e;
+  --color-vscode-fg-dim: #9b9b9b;
+  --color-vscode-accent: #007acc;
+  --color-vscode-accent-hover: #005a9e;
+  --color-vscode-button: #007acc;
+  --color-vscode-button-hover: #005a9e;
+  --color-vscode-button-fg: #ffffff;
+  --color-vscode-input-bg: #ffffff;
+  --color-vscode-input-border: #cecece;
+  --color-vscode-list-hover: #e8e8e8;
+  --color-vscode-list-active: #cce4f7;
+  --color-vscode-list-inactive: #e4e6f1;
+  --color-vscode-badge-bg: #d4d4d4;
+  --color-vscode-scrollbar: rgba(100, 100, 100, 0.4);
+  --color-vscode-scrollbar-hover: rgba(100, 100, 100, 0.7);
+
+  --color-git-modified: #895503;
+  --color-git-added: #587c0c;
+  --color-git-deleted: #ad0707;
+  --color-git-renamed: #587c0c;
+  --color-git-untracked: #007100;
+  --color-git-conflict: #ad0707;
+}
+
 html,
 body,
 #root {

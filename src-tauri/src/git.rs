@@ -1,5 +1,6 @@
-use git2::{Delta, DiffOptions, IndexAddOption, Repository, Sort, Status};
+use git2::{BranchType, Delta, DiffOptions, IndexAddOption, Repository, Sort, Status};
 use serde::Serialize;
+use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 
 #[derive(Serialize, Clone)]
@@ -24,6 +25,15 @@ pub struct CommitInfo {
     pub author: String,
     pub timestamp: i64,
     pub parents: Vec<String>,
+    /// local branch / tag names pointing at this commit
+    pub refs: Vec<String>,
+}
+
+#[derive(Serialize)]
+pub struct BranchInfo {
+    pub name: String,
+    #[serde(rename = "isHead")]
+    pub is_head: bool,
 }
 
 /// 固定管理当前项目自身的仓库：CARGO_MANIFEST_DIR 编译期即为 `<repo>/src-tauri`，取其父目录。
@@ -237,6 +247,23 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
         revwalk.push_head().map_err(|e| e.to_string())?;
     }
 
+    // commit hash -> 指向它的本地分支/tag 短名，用于历史面板的 ref 徽章
+    let mut ref_map: HashMap<String, Vec<String>> = HashMap::new();
+    let refs = repo.references().map_err(|e| e.to_string())?;
+    for r in refs {
+        let r = r.map_err(|e| e.to_string())?;
+        let name = r.name().unwrap_or("").to_string();
+        let short = name
+            .strip_prefix("refs/heads/")
+            .or_else(|| name.strip_prefix("refs/tags/"))
+            .map(|s| s.to_string());
+        if let Some(short_name) = short {
+            if let Ok(commit) = r.peel_to_commit() {
+                ref_map.entry(commit.id().to_string()).or_default().push(short_name);
+            }
+        }
+    }
+
     let mut result = Vec::new();
     for oid_res in revwalk {
         if result.len() >= limit {
@@ -247,6 +274,7 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
         let author = commit.author();
         let hash = oid.to_string();
 
+        let refs = ref_map.get(&hash).cloned().unwrap_or_default();
         result.push(CommitInfo {
             short_hash: hash.chars().take(7).collect(),
             hash,
@@ -254,6 +282,7 @@ pub fn git_log(limit: usize) -> Result<Vec<CommitInfo>, String> {
             author: author.name().unwrap_or("unknown").to_string(),
             timestamp: commit.time().seconds(),
             parents: commit.parent_ids().map(|id| id.to_string()).collect(),
+            refs,
         });
     }
 
@@ -303,4 +332,124 @@ pub fn git_commit_files(hash: String) -> Result<Vec<FileEntry>, String> {
     }
 
     Ok(files)
+}
+
+/// 未跟踪文件手写一份"整个文件都是新增"的 unified diff。
+/// 不走 libgit2 的 workdir diff：实测在这台机器上 `diff_index_to_workdir` 对未跟踪文件
+/// 返回的 delta 里 hunk 数始终是 0（size/exists 等元信息正常，就是读不到内容），
+/// 直接读文件内容自己拼输出更简单可靠。
+fn synthesize_new_file_diff(path: &str) -> Result<String, String> {
+    let full = repo_root().join(path);
+    let content = std::fs::read_to_string(&full).map_err(|e| e.to_string())?;
+    let line_count = content.lines().count();
+    let mut out = format!("diff --git a/{path} b/{path}\nnew file mode 100644\n--- /dev/null\n+++ b/{path}\n");
+    if line_count > 0 {
+        out.push_str(&format!("@@ -0,0 +1,{line_count} @@\n"));
+        for line in content.lines() {
+            out.push('+');
+            out.push_str(line);
+            out.push('\n');
+        }
+    }
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn git_diff(path: String, staged: bool) -> Result<String, String> {
+    let repo = open_repo()?;
+
+    if !staged {
+        let index = repo.index().map_err(|e| e.to_string())?;
+        if index.get_path(Path::new(&path), 0).is_none() {
+            // 不在暂存区里 = 未跟踪文件，走手写 diff
+            return synthesize_new_file_diff(&path);
+        }
+    }
+
+    let mut opts = DiffOptions::new();
+    opts.pathspec(&path);
+
+    let diff = if staged {
+        let tree = match repo.head() {
+            Ok(head) => Some(head.peel_to_tree().map_err(|e| e.to_string())?),
+            Err(_) => None,
+        };
+        let index = repo.index().map_err(|e| e.to_string())?;
+        repo.diff_tree_to_index(tree.as_ref(), Some(&index), Some(&mut opts))
+            .map_err(|e| e.to_string())?
+    } else {
+        let index = repo.index().map_err(|e| e.to_string())?;
+        repo.diff_index_to_workdir(Some(&index), Some(&mut opts))
+            .map_err(|e| e.to_string())?
+    };
+
+    let mut out = String::new();
+    diff.print(git2::DiffFormat::Patch, |_delta, _hunk, line| {
+        match line.origin() {
+            '+' | '-' | ' ' => out.push(line.origin()),
+            _ => {}
+        }
+        out.push_str(&String::from_utf8_lossy(line.content()));
+        true
+    })
+    .map_err(|e| e.to_string())?;
+
+    Ok(out)
+}
+
+#[tauri::command]
+pub fn git_branches() -> Result<Vec<BranchInfo>, String> {
+    let repo = open_repo()?;
+    let branches = repo
+        .branches(Some(BranchType::Local))
+        .map_err(|e| e.to_string())?;
+
+    let mut result = Vec::new();
+    for entry in branches {
+        let (branch, _) = entry.map_err(|e| e.to_string())?;
+        let name = match branch.name().map_err(|e| e.to_string())? {
+            Some(n) if !n.is_empty() => n.to_string(),
+            _ => continue,
+        };
+        result.push(BranchInfo {
+            is_head: branch.is_head(),
+            name,
+        });
+    }
+
+    Ok(result)
+}
+
+#[tauri::command]
+pub fn git_push(branch: String) -> Result<String, String> {
+    // 走系统 git 而不是 git2 的 push API：这个仓库的 remote 是 SSH，直接调用系统 git
+    // 能复用用户机器上已经配置好的 SSH agent / credential helper，不用在 Rust 里重新实现凭证逻辑。
+    let output = std::process::Command::new("git")
+        .args(["push", "origin", &branch])
+        .current_dir(repo_root())
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    if output.status.success() {
+        Ok(format!("{stdout}{stderr}"))
+    } else {
+        Err(if stderr.is_empty() { stdout } else { stderr })
+    }
+}
+
+#[tauri::command]
+pub fn git_checkout_branch(name: String) -> Result<(), String> {
+    let repo = open_repo()?;
+    let branch_ref = format!("refs/heads/{name}");
+    let target = repo
+        .revparse_single(&branch_ref)
+        .map_err(|e| e.to_string())?;
+
+    let mut checkout = git2::build::CheckoutBuilder::new();
+    checkout.safe();
+    repo.checkout_tree(&target, Some(&mut checkout))
+        .map_err(|e| e.to_string())?;
+    repo.set_head(&branch_ref).map_err(|e| e.to_string())
 }

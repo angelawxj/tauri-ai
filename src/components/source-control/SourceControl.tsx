@@ -1,18 +1,24 @@
 import { useMemo, useState } from "react";
-import { IconGitBranch, IconRefresh } from "../icons";
-import { gitApi } from "./api";
+import { IconRefresh, IconUpload } from "../icons";
+import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
+import BranchSwitcher from "./BranchSwitcher";
 import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
-import HistorySection from "./HistorySection";
+import HistoryPanel from "./HistoryPanel";
 
-export default function GitPanel() {
+interface SourceControlProps {
+  onOpenDiff?: (path: string, staged: boolean) => void;
+}
+
+export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const { status, loading, error, unavailable, refresh } = useGitStatus();
   const [message, setMessage] = useState("");
   const [committing, setCommitting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [historyTick, setHistoryTick] = useState(0);
+  const [pushing, setPushing] = useState(false);
 
   const staged = status?.staged ?? [];
   const unstaged = status?.unstaged ?? [];
@@ -27,6 +33,7 @@ export default function GitPanel() {
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
 
   const withErrorHandling = async (fn: () => Promise<void>) => {
+    setActionMessage(null);
     try {
       await fn();
       setActionError(null);
@@ -39,7 +46,7 @@ export default function GitPanel() {
     if (!canCommit) return;
     setCommitting(true);
     await withErrorHandling(async () => {
-      await gitApi.commit(message.trim());
+      await api.commit(message.trim());
       setMessage("");
       await refresh();
       setHistoryTick((t) => t + 1);
@@ -49,21 +56,45 @@ export default function GitPanel() {
 
   const confirmDiscard = (what: string) => window.confirm(`确定要丢弃${what}吗？此操作无法撤销。`);
 
+  const handleBranchSwitched = () => {
+    void refresh();
+    setHistoryTick((t) => t + 1);
+  };
+
+  const handlePush = async () => {
+    if (!status?.branch || pushing) return;
+    if (!window.confirm(`确定要把分支「${status.branch}」推送到 origin 吗？`)) return;
+    setPushing(true);
+    await withErrorHandling(async () => {
+      await api.push(status.branch);
+      setActionMessage(`已推送「${status.branch}」到 origin`);
+    });
+    setPushing(false);
+  };
+
   return (
     <div className="flex h-full flex-col overflow-hidden">
       <div className="flex h-8 shrink-0 items-center justify-between border-b border-vscode-border px-3">
-        <span className="flex items-center gap-1.5 text-[12px] text-vscode-fg-muted">
-          <IconGitBranch size={13} />
-          {status?.branch ?? "—"}
-        </span>
-        <button
-          type="button"
-          title="刷新"
-          onClick={() => void refresh()}
-          className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
-        >
-          <IconRefresh size={13} />
-        </button>
+        <BranchSwitcher currentBranch={status?.branch ?? "—"} onCheckedOut={handleBranchSwitched} />
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            title="推送到 origin"
+            onClick={() => void handlePush()}
+            disabled={unavailable || !status?.branch || pushing}
+            className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <IconUpload size={13} />
+          </button>
+          <button
+            type="button"
+            title="刷新"
+            onClick={() => void refresh()}
+            className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
+          >
+            <IconRefresh size={13} />
+          </button>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
@@ -82,12 +113,12 @@ export default function GitPanel() {
           </div>
         )}
 
-        {!unavailable && error && (
-          <div className="px-3 py-2 text-[12px] text-git-deleted">{error}</div>
-        )}
-
+        {!unavailable && error && <div className="px-3 py-2 text-[12px] text-git-deleted">{error}</div>}
         {!unavailable && actionError && (
           <div className="px-3 py-2 text-[12px] text-git-deleted">{actionError}</div>
+        )}
+        {!unavailable && !actionError && actionMessage && (
+          <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
         {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && (
@@ -97,54 +128,60 @@ export default function GitPanel() {
         {!unavailable && !error && (
           <>
             <ChangesSection
-              title="暂存的更改"
+              title="Staged Changes"
               entries={staged}
               variant="staged"
-              selectedPath={selectedPath}
-              onSelect={setSelectedPath}
-              onUnstage={(path) => void withErrorHandling(async () => {
-                await gitApi.unstage(path);
-                await refresh();
-              })}
-              onUnstageAll={() => void withErrorHandling(async () => {
-                await gitApi.unstageAll();
-                await refresh();
-              })}
+              onUnstage={(path) =>
+                void withErrorHandling(async () => {
+                  await api.unstage(path);
+                  await refresh();
+                })
+              }
+              onUnstageAll={() =>
+                void withErrorHandling(async () => {
+                  await api.unstageAll();
+                  await refresh();
+                })
+              }
+              onOpenDiff={onOpenDiff}
             />
             <ChangesSection
-              title="更改"
+              title="Changes"
               entries={unstaged}
               variant="unstaged"
-              selectedPath={selectedPath}
-              onSelect={setSelectedPath}
-              onStage={(path) => void withErrorHandling(async () => {
-                await gitApi.stage(path);
-                await refresh();
-              })}
-              onStageAll={() => void withErrorHandling(async () => {
-                await gitApi.stageAll();
-                await refresh();
-              })}
+              onStage={(path) =>
+                void withErrorHandling(async () => {
+                  await api.stage(path);
+                  await refresh();
+                })
+              }
+              onStageAll={() =>
+                void withErrorHandling(async () => {
+                  await api.stageAll();
+                  await refresh();
+                })
+              }
               onDiscard={(path) => {
                 if (!confirmDiscard(`「${path}」的更改`)) return;
                 void withErrorHandling(async () => {
-                  await gitApi.discard(path);
+                  await api.discard(path);
                   await refresh();
                 });
               }}
               onDiscardAll={() => {
                 if (!confirmDiscard("全部未暂存的更改")) return;
                 void withErrorHandling(async () => {
-                  await Promise.all(unstaged.map((f) => gitApi.discard(f.path)));
+                  await Promise.all(unstaged.map((f) => api.discard(f.path)));
                   await refresh();
                 });
               }}
+              onOpenDiff={onOpenDiff}
             />
           </>
         )}
-
-        <HistorySection refreshSignal={historyTick} />
       </div>
+
+      <HistoryPanel refreshSignal={historyTick} headBranchName={status?.branch ?? null} />
     </div>
   );
 }

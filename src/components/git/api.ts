@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { CommitInfo, FileEntry, GitStatus } from "../types/git";
+import type { CommitInfo, FileEntry, GitStatus } from "./types";
 
 const NOT_TAURI = "NOT_TAURI";
 

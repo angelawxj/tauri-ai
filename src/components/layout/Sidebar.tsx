@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { IconPlus, IconSearch, IconSettings } from "../icons";
+import { IconMoon, IconPlus, IconSearch, IconSettings, IconSun } from "../icons";
+import type { Theme } from "../../hooks/useTheme";
 
 interface SessionItem {
   id: string;
@@ -15,11 +16,16 @@ const MOCK_SESSIONS: SessionItem[] = [
   { id: "5", title: "Tailwind v4 主题变量迁移", time: "上周" },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  theme: Theme;
+  onToggleTheme: () => void;
+}
+
+export default function Sidebar({ theme, onToggleTheme }: SidebarProps) {
   const [activeId, setActiveId] = useState("1");
 
   return (
-    <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-vscode-border bg-[#202020]">
+    <aside className="flex h-full w-[260px] shrink-0 flex-col border-r border-vscode-border bg-vscode-sidebar">
       <div className="flex items-center justify-between px-3 py-3">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-vscode-fg-muted">
           tauri-ai
@@ -64,13 +70,23 @@ export default function Sidebar() {
 
       <div className="flex items-center justify-between border-t border-vscode-border px-3 py-2">
         <span className="text-[11px] text-vscode-fg-dim">v0.1.0</span>
-        <button
-          type="button"
-          className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
-          title="设置"
-        >
-          <IconSettings size={14} />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            onClick={onToggleTheme}
+            className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
+            title={theme === "dark" ? "切换到亮色主题" : "切换到暗色主题"}
+          >
+            {theme === "dark" ? <IconSun size={14} /> : <IconMoon size={14} />}
+          </button>
+          <button
+            type="button"
+            className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"
+            title="设置"
+          >
+            <IconSettings size={14} />
+          </button>
+        </div>
       </div>
     </aside>
   );

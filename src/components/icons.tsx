@@ -136,3 +136,37 @@ export function IconTrash({ size = 16, className }: IconProps) {
     </svg>
   );
 }
+
+export function IconSun({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <circle cx="8" cy="8" r="3.2" />
+      <path d="M8 1.5v1.6M8 12.9v1.6M14.5 8h-1.6M3.1 8H1.5M12.5 3.5l-1.1 1.1M4.6 11.4l-1.1 1.1M12.5 12.5l-1.1-1.1M4.6 4.6 3.5 3.5" />
+    </svg>
+  );
+}
+
+export function IconMoon({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M13.5 9.8A5.8 5.8 0 0 1 6.2 2.5a5.8 5.8 0 1 0 7.3 7.3Z" />
+    </svg>
+  );
+}
+
+export function IconUpload({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M8 12.5V4M8 4 4.5 7.5M8 4l3.5 3.5" />
+      <path d="M3 13.5h10" />
+    </svg>
+  );
+}
+
+export function IconX({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M3.5 3.5 12.5 12.5M12.5 3.5 3.5 12.5" />
+    </svg>
+  );
+}

@@ -14,6 +14,10 @@ fn main() {
             git::git_commit,
             git::git_log,
             git::git_commit_files,
+            git::git_diff,
+            git::git_branches,
+            git::git_checkout_branch,
+            git::git_push,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

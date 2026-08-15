@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { IconChevronDown, IconChevronRight, IconRefresh } from "../icons";
-import { gitApi, isGitApiUnavailable } from "../../lib/git-api";
-import { computeCommitGraph } from "../../lib/commit-graph";
-import type { CommitInfo, FileEntry } from "../../types/git";
+import { gitApi, isGitApiUnavailable } from "./api";
+import { computeCommitGraph } from "./commit-graph";
+import type { CommitInfo, FileEntry } from "./types";
 import CommitRow from "./CommitRow";
 
 interface HistorySectionProps {

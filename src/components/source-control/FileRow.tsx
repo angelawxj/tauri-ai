@@ -1,14 +1,6 @@
 import { IconFile, IconMinus, IconPlus, IconUndo } from "../icons";
-import type { FileEntry, FileStatus } from "./types";
-
-const STATUS_META: Record<FileStatus, { label: string; color: string }> = {
-  M: { label: "M", color: "text-git-modified" },
-  A: { label: "A", color: "text-git-added" },
-  D: { label: "D", color: "text-git-deleted" },
-  R: { label: "R", color: "text-git-renamed" },
-  U: { label: "U", color: "text-git-untracked" },
-  "?": { label: "U", color: "text-git-untracked" },
-};
+import { STATUS_COLOR_CLASS, STATUS_LABELS } from "./status";
+import type { FileEntry } from "./types";
 
 function splitPath(path: string): { dir: string; name: string } {
   const idx = path.lastIndexOf("/");
@@ -19,33 +11,39 @@ function splitPath(path: string): { dir: string; name: string } {
 interface FileRowProps {
   entry: FileEntry;
   variant: "staged" | "unstaged" | "readonly";
-  selected?: boolean;
-  onSelect?: (path: string) => void;
   onStage?: (path: string) => void;
   onUnstage?: (path: string) => void;
   onDiscard?: (path: string) => void;
+  /** 点击文件行时触发，在中间区域打开一个 diff 标签页 */
+  onOpenDiff?: (path: string, staged: boolean) => void;
 }
 
 export default function FileRow({
   entry,
   variant,
-  selected,
-  onSelect,
   onStage,
   onUnstage,
   onDiscard,
+  onOpenDiff,
 }: FileRowProps) {
   const { dir, name } = splitPath(entry.path);
-  const meta = STATUS_META[entry.status];
+  const colorClass = STATUS_COLOR_CLASS[entry.status];
+  const label = STATUS_LABELS[entry.status];
+  const canOpenDiff = variant !== "readonly";
+
+  const handleClick = () => {
+    if (!canOpenDiff) return;
+    onOpenDiff?.(entry.path, variant === "staged");
+  };
 
   return (
     <div
       role="button"
       tabIndex={0}
-      onClick={() => onSelect?.(entry.path)}
+      onClick={handleClick}
       title={entry.path}
       className={`group flex h-[22px] w-full items-center gap-1.5 rounded-sm px-2 text-[12.5px] ${
-        selected ? "bg-vscode-list-active" : "hover:bg-vscode-list-hover"
+        canOpenDiff ? "cursor-pointer hover:bg-vscode-list-hover" : ""
       }`}
     >
       <IconFile size={13} className="shrink-0 text-vscode-fg-muted" />
@@ -55,12 +53,10 @@ export default function FileRow({
       </span>
 
       {variant === "readonly" ? (
-        <span className={`shrink-0 text-[11px] font-semibold ${meta.color}`}>{meta.label}</span>
+        <span className={`shrink-0 text-[11px] font-semibold ${colorClass}`}>{label}</span>
       ) : (
         <span className="relative flex shrink-0 items-center">
-          <span className={`text-[11px] font-semibold group-hover:hidden ${meta.color}`}>
-            {meta.label}
-          </span>
+          <span className={`text-[11px] font-semibold group-hover:hidden ${colorClass}`}>{label}</span>
           <span className="hidden items-center gap-0.5 group-hover:flex">
             {variant === "unstaged" && (
               <>
