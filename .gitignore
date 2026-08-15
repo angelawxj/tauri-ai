@@ -1,0 +1,14 @@
+node_modules
+dist
+dist-ssr
+*.local
+
+# Tauri / Rust
+src-tauri/target
+src-tauri/gen
+
+# Editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db

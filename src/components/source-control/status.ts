@@ -1,0 +1,18 @@
+import type { FileStatus } from "./types";
+
+export const STATUS_LABELS: Record<FileStatus, string> = {
+  M: "M",
+  A: "A",
+  D: "D",
+  R: "R",
+  U: "U",
+};
+
+/** 复用项目主题里已有的 --color-git-* Tailwind 色令牌，两个 Tab 共用同一套配色 */
+export const STATUS_COLOR_CLASS: Record<FileStatus, string> = {
+  M: "text-git-modified",
+  A: "text-git-added",
+  D: "text-git-deleted",
+  R: "text-git-renamed",
+  U: "text-git-untracked",
+};
