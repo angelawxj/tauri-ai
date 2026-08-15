@@ -49,9 +49,9 @@
   --color-vscode-panel-header: #ececec;
   --color-vscode-border: #e0e0e0;
   --color-vscode-border-light: #c8c8c8;
-  --color-vscode-fg: #3b3b3b;
-  --color-vscode-fg-muted: #6e6e6e;
-  --color-vscode-fg-dim: #9b9b9b;
+  --color-vscode-fg: #1f1f1f;
+  --color-vscode-fg-muted: #505050;
+  --color-vscode-fg-dim: #808080;
   --color-vscode-accent: #007acc;
   --color-vscode-accent-hover: #005a9e;
   --color-vscode-button: #007acc;
@@ -92,6 +92,11 @@ body {
 
 * {
   box-sizing: border-box;
+}
+
+button:not(:disabled),
+[role="button"] {
+  cursor: pointer;
 }
 
 /* VSCode 风格细滚动条 */

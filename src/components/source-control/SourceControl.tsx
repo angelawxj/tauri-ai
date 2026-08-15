@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { IconRefresh, IconUpload } from "../icons";
+import { useEffect, useMemo, useState } from "react";
+import { IconRefresh, IconSearch, IconUpload, IconX } from "../icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
 import { useI18n } from "../../i18n";
@@ -7,9 +7,10 @@ import BranchSwitcher from "./BranchSwitcher";
 import CommitBox from "./CommitBox";
 import ChangesSection from "./ChangesSection";
 import HistoryPanel from "./HistoryPanel";
+import CommittedChangesSection from "./CommittedChangesSection";
 
 interface SourceControlProps {
-  onOpenDiff?: (path: string, staged: boolean) => void;
+  onOpenDiff?: (path: string, staged: boolean, commitHash?: string) => void;
 }
 
 export default function SourceControl({ onOpenDiff }: SourceControlProps) {
@@ -21,9 +22,17 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [historyTick, setHistoryTick] = useState(0);
   const [pushing, setPushing] = useState(false);
+  const [hasUpstream, setHasUpstream] = useState<boolean | null>(null);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterQuery, setFilterQuery] = useState("");
 
   const staged = status?.staged ?? [];
-  const unstaged = status?.unstaged ?? [];
+  const unstaged = (status?.unstaged ?? []).filter((entry) => entry.status !== "U");
+  const untracked = (status?.unstaged ?? []).filter((entry) => entry.status === "U");
+  const matchesFilter = (path: string) => path.toLocaleLowerCase().includes(filterQuery.trim().toLocaleLowerCase());
+  const filteredStaged = staged.filter((entry) => matchesFilter(entry.path));
+  const filteredUnstaged = unstaged.filter((entry) => matchesFilter(entry.path));
+  const filteredUntracked = untracked.filter((entry) => matchesFilter(entry.path));
 
   const disabledReason = useMemo(() => {
     if (unavailable) return t.git.notConnected;
@@ -33,6 +42,14 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   }, [unavailable, message, staged.length, t]);
 
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
+  const canStageAll = !unavailable && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
+  const canPublish = !unavailable && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && hasUpstream === false;
+
+  useEffect(() => {
+    let cancelled = false;
+    api.historyContext().then((context) => { if (!cancelled) setHasUpstream(Boolean(context.remoteRef)); }).catch(() => { if (!cancelled) setHasUpstream(null); });
+    return () => { cancelled = true; };
+  }, [status?.branch]);
 
   const withErrorHandling = async (fn: () => Promise<void>) => {
     setActionMessage(null);
@@ -74,11 +91,42 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     setPushing(false);
   };
 
+  const handleCommitAndPush = async () => {
+    if (!canCommit || !status?.branch) return;
+    setCommitting(true);
+    await withErrorHandling(async () => {
+      await api.commit(message.trim());
+      await api.push(status.branch);
+      setMessage("");
+      await refresh();
+      setHistoryTick((t) => t + 1);
+    });
+    setCommitting(false);
+  };
+  const runRemoteAction = async (action: () => Promise<unknown>) => {
+    await withErrorHandling(async () => { await action(); await refresh(); setHistoryTick((tick) => tick + 1); });
+  };
+  const handleForcePush = () => {
+    if (!status?.branch || !window.confirm(t.git.confirmForcePush(status.branch))) return;
+    void runRemoteAction(() => api.forcePush(status.branch));
+  };
+  const handleRebaseMain = () => {
+    if (!window.confirm(t.git.confirmRebaseMain)) return;
+    void runRemoteAction(() => api.rebaseMain());
+  };
+
   return (
-    <div className="flex h-full flex-col overflow-hidden">
-      <div className="flex h-8 shrink-0 items-center justify-between border-b border-vscode-border px-3">
-        <BranchSwitcher currentBranch={status?.branch ?? "—"} onCheckedOut={handleBranchSwitched} />
+    <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
+      <div className="flex h-9 shrink-0 items-center justify-between border-b border-vscode-border bg-vscode-bg px-3">
+        {filterOpen ? (
+          <div className="flex min-w-0 flex-1 items-center gap-2">
+            <IconSearch size={14} className="shrink-0 text-vscode-fg-muted" />
+            <input autoFocus value={filterQuery} onChange={(event) => setFilterQuery(event.target.value)} placeholder={t.git.filterFiles} className="min-w-0 flex-1 bg-transparent text-[13px] text-vscode-fg outline-none placeholder:text-vscode-fg-dim" />
+            <button type="button" title={t.common.close} onClick={() => { setFilterOpen(false); setFilterQuery(""); }} className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"><IconX size={13} /></button>
+          </div>
+        ) : <div className="flex min-w-0 flex-1 items-center gap-2"><span title={status?.repoPath} className="max-w-28 shrink-0 truncate font-mono text-[13px] font-medium text-vscode-fg" >{status?.repoName ?? "repository"}</span><span className="h-4 shrink-0 w-px bg-vscode-border" /><BranchSwitcher currentBranch={status?.branch ?? "—"} onCheckedOut={handleBranchSwitched} /></div>}
         <div className="flex items-center gap-0.5">
+          {!filterOpen && <button type="button" title={t.git.filterFiles} onClick={() => setFilterOpen(true)} className="rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg"><IconSearch size={13} /></button>}
           <button
             type="button"
             title={t.git.push}
@@ -103,10 +151,31 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
         <CommitBox
           message={message}
           onMessageChange={setMessage}
-          onCommit={() => void handleCommit()}
-          canCommit={canCommit}
-          disabledReason={disabledReason}
+          onCommit={() => {
+            if (canStageAll) {
+              void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
+            } else if (canPublish) {
+              void handlePush();
+            } else {
+              void handleCommit();
+            }
+          }}
+          canCommit={canCommit || canStageAll || canPublish}
+          disabledReason={canStageAll || canPublish ? "" : disabledReason}
           committing={committing}
+          actionLabel={canPublish ? t.git.publishBranch : canStageAll ? t.git.stageAllChanges : undefined}
+          actionTitle={canPublish ? t.git.publishBranch : canStageAll ? t.git.stageAllChanges : undefined}
+          actionKind={canPublish ? "publish" : canStageAll ? "stage" : "commit"}
+          onPush={() => void handlePush()}
+          canPush={!unavailable && Boolean(status?.branch)}
+          onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
+          canStageAll={!unavailable && (unstaged.length > 0 || untracked.length > 0)}
+          onFetch={() => void runRemoteAction(() => api.fetch())}
+          onPull={() => void runRemoteAction(() => api.pull())}
+          onForcePush={handleForcePush}
+          onSync={() => void runRemoteAction(async () => { await api.pull(); if (status?.branch) await api.push(status.branch); })}
+          onRebaseMain={handleRebaseMain}
+          onCommitAndPush={() => void handleCommitAndPush()}
         />
 
         {unavailable && (
@@ -123,7 +192,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
-        {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && (
+        {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && (
           <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">{t.git.noChangesDetected}</div>
         )}
 
@@ -131,7 +200,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <>
             <ChangesSection
               title={t.git.stagedChangesTitle}
-              entries={staged}
+              entries={filteredStaged}
               variant="staged"
               onUnstage={(path) =>
                 void withErrorHandling(async () => {
@@ -149,7 +218,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
             />
             <ChangesSection
               title={t.git.changesTitle}
-              entries={unstaged}
+              entries={filteredUnstaged}
               variant="unstaged"
               onStage={(path) =>
                 void withErrorHandling(async () => {
@@ -179,11 +248,20 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
               }}
               onOpenDiff={onOpenDiff}
             />
+            <ChangesSection
+              title={t.git.untrackedFilesTitle}
+              entries={filteredUntracked}
+              variant="untracked"
+              onStage={(path) => void withErrorHandling(async () => { await api.stage(path); await refresh(); })}
+              onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
+              onOpenDiff={onOpenDiff}
+            />
+            <CommittedChangesSection title={t.git.committedChangesTitle} refreshSignal={historyTick} filterQuery={filterQuery} />
           </>
         )}
       </div>
 
-        <HistoryPanel refreshSignal={historyTick} currentBranch={status?.branch} />
+      <HistoryPanel refreshSignal={historyTick} onOpenCommitFile={(hash, path) => onOpenDiff?.(path, false, hash)} />
     </div>
   );
 }

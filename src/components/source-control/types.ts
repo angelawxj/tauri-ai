@@ -3,10 +3,14 @@ export type FileStatus = "M" | "A" | "D" | "R" | "U";
 export interface FileEntry {
   path: string;
   status: FileStatus;
+  additions: number;
+  deletions: number;
 }
 
 export interface GitStatus {
   branch: string;
+  repoName: string;
+  repoPath: string;
   staged: FileEntry[];
   unstaged: FileEntry[];
 }
@@ -23,6 +27,21 @@ export interface CommitInfo {
   refs: string[];
 }
 
+/** Context needed to assign graph lanes in the same way as Orca. */
+export interface HistoryRef {
+  id: string;
+  name: string;
+  revision?: string;
+}
+
+export interface GitHistoryContext {
+  currentRef?: HistoryRef;
+  remoteRef?: HistoryRef;
+  mergeBase?: string;
+  hasIncomingChanges: boolean;
+  hasOutgoingChanges: boolean;
+}
+
 export interface BranchInfo {
   name: string;
   isHead: boolean;
@@ -32,4 +51,6 @@ export interface BranchInfo {
 export interface OpenDiffRequest {
   path: string;
   staged: boolean;
+  /** When present, show this file's patch from a committed revision. */
+  commitHash?: string;
 }

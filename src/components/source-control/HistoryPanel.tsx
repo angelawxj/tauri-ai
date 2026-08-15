@@ -5,6 +5,7 @@ import { computeSwimlanes } from "./commit-graph";
 import { useGitHistory } from "./useGitHistory";
 import { useI18n } from "../../i18n";
 import CommitRow from "./CommitRow";
+import BoundaryRow from "./BoundaryRow";
 
 const MIN_HEIGHT = 120;
 const DEFAULT_HEIGHT = 240;
@@ -17,18 +18,18 @@ function maxHeight(): number {
 interface HistoryPanelProps {
   /** bump to force a re-fetch (e.g. right after a commit) */
   refreshSignal: number;
-  currentBranch?: string;
+  onOpenCommitFile?: (hash: string, path: string) => void;
 }
 
-export default function HistoryPanel({ refreshSignal, currentBranch }: HistoryPanelProps) {
+export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: HistoryPanelProps) {
   const { t } = useI18n();
-  const { commits, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
+  const { commits, context, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
     useGitHistory(refreshSignal);
   const [collapsed, setCollapsed] = useState(false);
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const dragState = useRef<{ startY: number; startHeight: number } | null>(null);
 
-  const graphRows = computeSwimlanes(commits, currentBranch);
+  const graphRows = computeSwimlanes(commits, context);
   const laneCount = Math.max(1, ...graphRows.map((r) => r.laneCount));
 
   const onDragStart = useCallback(
@@ -88,11 +89,11 @@ export default function HistoryPanel({ refreshSignal, currentBranch }: HistoryPa
           <button
             type="button"
             onClick={() => setCollapsed((c) => !c)}
-            className="flex min-w-0 flex-1 items-center gap-1 px-0.5 text-left text-[11px] font-semibold tracking-wide text-vscode-fg-muted"
+            className="flex min-w-0 flex-1 items-center gap-1 px-0.5 text-left text-[12px] font-semibold tracking-wide text-[#000]"
           >
             {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
             <span className="truncate">{t.git.commitHistoryTitle}</span>
-            {commits.length > 0 && <span className="text-[10px] font-medium tabular-nums">{commits.length}</span>}
+            {commits.length > 0 && <span className="text-[12px] font-medium tabular-nums">{commits.length}</span>}
           </button>
           <span title="What are refs?" className="my-auto flex h-4 w-4 items-center justify-center rounded-full border border-vscode-fg-dim text-[10px] text-vscode-fg-muted">?</span>
         <button
@@ -122,19 +123,24 @@ export default function HistoryPanel({ refreshSignal, currentBranch }: HistoryPa
           )}
           {!unavailable &&
             !error &&
-            commits.map((commit, i) => (
-              <CommitRow
-                key={commit.hash}
-                commit={commit}
-                graphRow={graphRows[i]}
-                maxLanes={laneCount}
-                isHead={i === 0}
-                expanded={expanded.has(commit.hash)}
-                onToggle={() => toggleExpanded(commit.hash)}
-                files={filesFor(commit.hash)}
-                filesLoading={isFilesLoading(commit.hash)}
-              />
-            ))}
+            graphRows.map((row) =>
+              row.kind === "commit" ? (
+                <CommitRow
+                  key={row.commit!.hash}
+                  commit={row.commit!}
+                  graphRow={row}
+                  maxLanes={laneCount}
+                  isHead={row.isHead}
+                  expanded={expanded.has(row.commit!.hash)}
+                  onToggle={() => toggleExpanded(row.commit!.hash)}
+                  files={filesFor(row.commit!.hash)}
+                  filesLoading={isFilesLoading(row.commit!.hash)}
+                  onOpenFile={(path) => onOpenCommitFile?.(row.commit!.hash, path)}
+                />
+              ) : (
+                <BoundaryRow key={row.kind} graphRow={row} maxLanes={laneCount} />
+              ),
+            )}
         </div>
       )}
     </div>

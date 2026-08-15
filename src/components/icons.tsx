@@ -102,6 +102,16 @@ export function IconFile({ size = 16, className }: IconProps) {
   );
 }
 
+/** Orca-style code document glyph used by Source Control file rows. */
+export function IconCommitFile({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M4 1.8h5.2L12 4.6v9.6H4z" />
+      <path d="M9.2 1.8v2.8H12M6.4 7.2 4.9 8.6l1.5 1.4M9.6 7.2l1.5 1.4-1.5 1.4" />
+    </svg>
+  );
+}
+
 export function IconUndo({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
