@@ -34,6 +34,7 @@ interface CommitRowProps {
   graphRow: GraphRow;
   maxLanes: number;
   isHead: boolean;
+  baseRefName?: string;
   expanded: boolean;
   onToggle: () => void;
   files: FileEntry[] | undefined;
@@ -41,13 +42,14 @@ interface CommitRowProps {
   onOpenFile?: (path: string) => void;
 }
 
-function refClass(name: string, isHead: boolean): string {
+function refClass(name: string, isHead: boolean, baseRefName?: string): string {
   if (isHead) return "border-vscode-accent text-vscode-accent";
+  if (name === baseRefName) return "border-[#ea5c00] text-[#ea5c00]";
   if (name.endsWith("/main")) return "border-git-deleted text-git-deleted";
   return "border-vscode-border-light text-vscode-fg-muted";
 }
 
-export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded, onToggle, files, filesLoading, onOpenFile }: CommitRowProps) {
+export default function CommitRow({ commit, graphRow, maxLanes, isHead, baseRefName, expanded, onToggle, files, filesLoading, onOpenFile }: CommitRowProps) {
   const { lang, t } = useI18n();
   const [menu, setMenu] = useState<{ x: number; y: number } | null>(null);
   const subject = commit.message.split("\n")[0];
@@ -87,7 +89,7 @@ export default function CommitRow({ commit, graphRow, maxLanes, isHead, expanded
         </span>
         {(visibleRefs.length > 0 || hiddenRefCount > 0) && (
           <span className="flex shrink-0 items-center gap-1 overflow-hidden">
-            {visibleRefs.map((ref) => <span key={ref} title={ref} className={`max-w-[128px] truncate rounded-full border bg-vscode-panel px-1.5 py-0.5 text-[10px] leading-none ${refClass(ref, isHead)}`}>{ref}</span>)}
+            {visibleRefs.map((ref) => <span key={ref} title={ref} className={`max-w-[128px] truncate rounded-full border bg-transparent px-1.5 py-0.5 text-[10px] leading-none ${refClass(ref, isHead, baseRefName)}`}>{ref}</span>)}
             {hiddenRefCount > 0 && <span className="text-[10px] leading-none text-vscode-fg-muted">+{hiddenRefCount}</span>}
           </span>
         )}

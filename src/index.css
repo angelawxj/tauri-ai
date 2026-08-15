@@ -33,7 +33,9 @@
   --color-git-deleted: #c74e39;
   --color-git-renamed: #73c991;
   --color-git-untracked: #73c991;
-  --color-git-conflict: #c74e39;
+  /* Orca conflict status uses its destructive token, not the Git deletion color. */
+  --color-git-conflict: #ff6568;
+  --color-conflict-amber: #fbbf24;
 
   --font-sans: "Segoe UI", "Microsoft YaHei", -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: "Cascadia Code", Consolas, "SFMono-Regular", Menlo, monospace;
@@ -71,7 +73,8 @@
   --color-git-deleted: #ad0707;
   --color-git-renamed: #587c0c;
   --color-git-untracked: #007100;
-  --color-git-conflict: #ad0707;
+  --color-git-conflict: #e40014;
+  --color-conflict-amber: #d97706;
 }
 
 html,

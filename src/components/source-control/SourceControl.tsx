@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { IconRefresh, IconSearch, IconUpload, IconX } from "../icons";
+import { IconGitMerge, IconRefresh, IconSearch, IconSparkle, IconUpload, IconX } from "../icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
 import { useI18n } from "../../i18n";
@@ -27,12 +27,14 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [hasOutgoingChanges, setHasOutgoingChanges] = useState(false);
 
   const staged = status?.staged ?? [];
-  const unstaged = (status?.unstaged ?? []).filter((entry) => entry.status !== "U");
+  const conflicts = (status?.unstaged ?? []).filter((entry) => entry.status === "C");
+  const unstaged = (status?.unstaged ?? []).filter((entry) => entry.status !== "U" && entry.status !== "C");
   const untracked = (status?.unstaged ?? []).filter((entry) => entry.status === "U");
   const matchesFilter = (path: string) => path.toLocaleLowerCase().includes(filterQuery.trim().toLocaleLowerCase());
   const filteredStaged = staged.filter((entry) => matchesFilter(entry.path));
   const filteredUnstaged = unstaged.filter((entry) => matchesFilter(entry.path));
   const filteredUntracked = untracked.filter((entry) => matchesFilter(entry.path));
+  const filteredConflicts = conflicts.filter((entry) => matchesFilter(entry.path));
 
   const disabledReason = useMemo(() => {
     if (unavailable) return t.git.notConnected;
@@ -41,9 +43,9 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     return "";
   }, [unavailable, message, staged.length, t]);
 
-  const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
-  const canStageAll = !unavailable && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
-  const canPushIdle = !unavailable && hasOutgoingChanges && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
+  const canCommit = !unavailable && conflicts.length === 0 && message.trim().length > 0 && staged.length > 0;
+  const canStageAll = !unavailable && conflicts.length === 0 && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
+  const canPushIdle = !unavailable && conflicts.length === 0 && hasOutgoingChanges && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
 
   const refreshOutgoingStatus = async () => {
     try {
@@ -131,6 +133,14 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     if (!window.confirm(t.git.confirmRebaseMain)) return;
     void runRemoteAction(() => api.rebaseMain());
   };
+  const handleAbortMerge = () => {
+    if (!window.confirm("确定要中止当前合并吗？未提交的合并结果将被撤销。")) return;
+    void runRemoteAction(() => api.abortMerge());
+  };
+  const handleOpenFirstConflict = () => {
+    const firstConflict = conflicts[0];
+    if (firstConflict) onOpenDiff?.(firstConflict.path, false);
+  };
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
@@ -165,7 +175,23 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto">
-        <CommitBox
+        {conflicts.length > 0 && (
+          <div className="mx-3 mt-2 rounded-md border border-[#f59e0b]/25 bg-[#f59e0b]/5 px-3 py-2 text-vscode-fg">
+            <div className="flex items-start gap-2">
+              <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center text-[16px] leading-none text-conflict-amber">⚠</span>
+              <div className="min-w-0 flex-1">
+                <div className="text-xs font-medium">Merge conflicts: {conflicts.length} 未解决</div>
+                <p className="mt-1 text-[11px] text-vscode-fg-muted">已解决的文件在离开实时冲突状态后会恢复正常更改。</p>
+              </div>
+            </div>
+            <div className="mt-2">
+              <button type="button" disabled title="当前未配置 AI 冲突解决能力" className="flex h-7 w-full items-center justify-center gap-1 rounded-md bg-[#1d1d1f] px-3 text-xs font-medium text-white disabled:cursor-not-allowed disabled:opacity-90"><IconSparkle size={12} /> 用AI解决</button>
+              <button type="button" onClick={handleOpenFirstConflict} className="mt-1.5 flex h-7 w-full items-center justify-center gap-1 rounded-md border border-vscode-border-light bg-vscode-bg px-3 text-xs text-vscode-fg hover:bg-vscode-list-hover"><IconGitMerge size={13} /> 评审冲突</button>
+              <button type="button" onClick={handleAbortMerge} className="mt-1.5 flex h-7 w-full items-center justify-center rounded-md border border-vscode-border-light bg-vscode-bg px-3 text-xs text-vscode-fg hover:bg-vscode-list-hover">中止合并</button>
+            </div>
+          </div>
+        )}
+        {conflicts.length === 0 && <CommitBox
           message={message}
           onMessageChange={setMessage}
           onCommit={() => {
@@ -186,14 +212,14 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           onPush={() => void handlePush()}
           canPush={!unavailable && Boolean(status?.branch)}
           onStageAll={() => void withErrorHandling(async () => { await api.stageAll(); await refresh(); })}
-          canStageAll={!unavailable && (unstaged.length > 0 || untracked.length > 0)}
+          canStageAll={canStageAll}
           onFetch={() => void runRemoteAction(() => api.fetch())}
           onPull={() => void runRemoteAction(() => api.pull())}
           onForcePush={handleForcePush}
           onSync={() => void runRemoteAction(async () => { await api.pull(); if (status?.branch) await api.push(status.branch); })}
           onRebaseMain={handleRebaseMain}
           onCommitAndPush={() => void handleCommitAndPush()}
-        />
+        />}
 
         {unavailable && (
           <div className="px-3 py-3 text-[12px] leading-relaxed text-vscode-fg-dim">
@@ -209,12 +235,20 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
-        {!unavailable && !error && !loading && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && (
+        {!unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && (
           <div className="px-3 py-3 text-[12px] text-vscode-fg-dim">{t.git.noChangesDetected}</div>
         )}
 
         {!unavailable && !error && (
           <>
+            <ChangesSection
+              title="冲突"
+              titleSuffix={` · ${conflicts.length} 冲突`}
+              titleSuffixClassName="ml-1 font-normal text-git-conflict"
+              entries={filteredConflicts}
+              variant="conflict"
+              onOpenDiff={onOpenDiff}
+            />
             <ChangesSection
               title={t.git.stagedChangesTitle}
               entries={filteredStaged}

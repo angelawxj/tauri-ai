@@ -49,4 +49,5 @@ export const api = {
   fetch: () => call<string>("git_fetch"),
   pull: () => call<string>("git_pull"),
   rebaseMain: () => call<string>("git_rebase_main"),
+  abortMerge: () => call<string>("git_abort_merge"),
 };

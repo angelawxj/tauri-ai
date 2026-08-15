@@ -28,6 +28,7 @@ fn main() {
             git::git_pull,
             git::git_force_push,
             git::git_rebase_main,
+            git::git_abort_merge,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

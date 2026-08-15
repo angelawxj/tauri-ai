@@ -1,4 +1,4 @@
-export type FileStatus = "M" | "A" | "D" | "R" | "U";
+export type FileStatus = "M" | "A" | "D" | "R" | "U" | "C";
 
 export interface FileEntry {
   path: string;
@@ -37,6 +37,7 @@ export interface HistoryRef {
 export interface GitHistoryContext {
   currentRef?: HistoryRef;
   remoteRef?: HistoryRef;
+  baseRef?: HistoryRef;
   mergeBase?: string;
   hasIncomingChanges: boolean;
   hasOutgoingChanges: boolean;

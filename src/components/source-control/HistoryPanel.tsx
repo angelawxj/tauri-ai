@@ -31,6 +31,10 @@ export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: Histor
 
   const graphRows = computeSwimlanes(commits, context);
   const laneCount = Math.max(1, ...graphRows.map((r) => r.laneCount));
+  const fallbackBaseRefName = commits
+    .find((commit) => commit.refs.some((ref) => ref === "dev" || ref === "main"))
+    ?.refs.find((ref) => ref === "dev" || ref === "main");
+  const baseRefName = context?.baseRef?.name ?? fallbackBaseRefName;
 
   const onDragStart = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -130,6 +134,7 @@ export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: Histor
                   graphRow={row}
                   maxLanes={laneCount}
                   isHead={row.isHead}
+                  baseRefName={baseRefName}
                   expanded={expanded.has(row.commit!.hash)}
                   onToggle={() => toggleExpanded(row.commit!.hash)}
                   files={filesFor(row.commit!.hash)}

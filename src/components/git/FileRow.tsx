@@ -9,6 +9,7 @@ const STATUS_META: Record<FileStatus, { label: string; color: string }> = {
   R: { label: "R", color: "text-git-renamed" },
   U: { label: "U", color: "text-git-untracked" },
   "?": { label: "U", color: "text-git-untracked" },
+  C: { label: "C", color: "text-git-conflict" },
 };
 
 function splitPath(path: string): { dir: string; name: string } {
