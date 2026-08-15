@@ -2,6 +2,7 @@ import { useState } from "react";
 import { IconChevronDown, IconChevronRight, IconMinus, IconPlus, IconUndo } from "../icons";
 import FileRow from "./FileRow";
 import type { FileEntry } from "./types";
+import { useI18n } from "../../i18n";
 
 interface ChangesSectionProps {
   title: string;
@@ -30,6 +31,7 @@ export default function ChangesSection({
   onUnstageAll,
   onDiscardAll,
 }: ChangesSectionProps) {
+  const { t } = useI18n();
   const [collapsed, setCollapsed] = useState(false);
 
   if (entries.length === 0) return null;
@@ -51,7 +53,7 @@ export default function ChangesSection({
             <>
               <button
                 type="button"
-                title="丢弃全部更改"
+                title={t.git.discardAllChanges}
                 onClick={(e) => {
                   e.stopPropagation();
                   onDiscardAll?.();
@@ -62,7 +64,7 @@ export default function ChangesSection({
               </button>
               <button
                 type="button"
-                title="暂存全部更改"
+                title={t.git.stageAllChanges}
                 onClick={(e) => {
                   e.stopPropagation();
                   onStageAll?.();
@@ -76,7 +78,7 @@ export default function ChangesSection({
           {variant === "staged" && (
             <button
               type="button"
-              title="取消暂存全部"
+              title={t.git.unstageAll}
               onClick={(e) => {
                 e.stopPropagation();
                 onUnstageAll?.();

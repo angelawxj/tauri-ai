@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { GitStatus } from "./types";
+import { useI18n } from "../../i18n";
 
 interface UseGitStatusResult {
   status: GitStatus | null;
@@ -12,6 +13,7 @@ interface UseGitStatusResult {
 }
 
 export function useGitStatus(): UseGitStatusResult {
+  const { t } = useI18n();
   const [status, setStatus] = useState<GitStatus | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,12 +31,12 @@ export function useGitStatus(): UseGitStatusResult {
         setUnavailable(true);
         setError(null);
       } else {
-        setError(err instanceof Error ? err.message : "加载 Git 状态失败");
+        setError(err instanceof Error ? err.message : t.git.loadStatusFailed);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();

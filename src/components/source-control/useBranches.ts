@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, isApiUnavailable } from "./api";
 import type { BranchInfo } from "./types";
+import { useI18n } from "../../i18n";
 
 interface UseBranchesResult {
   branches: BranchInfo[];
@@ -13,6 +14,7 @@ interface UseBranchesResult {
 }
 
 export function useBranches(): UseBranchesResult {
+  const { t } = useI18n();
   const [branches, setBranches] = useState<BranchInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,12 +33,12 @@ export function useBranches(): UseBranchesResult {
         setUnavailable(true);
         setError(null);
       } else {
-        setError(err instanceof Error ? err.message : "加载分支列表失败");
+        setError(err instanceof Error ? err.message : t.git.loadBranchesFailed);
       }
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     void refresh();
@@ -50,13 +52,13 @@ export function useBranches(): UseBranchesResult {
         setError(null);
         await refresh();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "切换分支失败");
+        setError(err instanceof Error ? err.message : t.git.checkoutFailed);
         throw err;
       } finally {
         setCheckingOut(false);
       }
     },
-    [refresh],
+    [refresh, t],
   );
 
   return { branches, loading, error, unavailable, refresh, checkout, checkingOut };

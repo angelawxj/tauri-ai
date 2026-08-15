@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { IconChevronDown, IconGitBranch } from "../icons";
 import { useBranches } from "./useBranches";
+import { useI18n } from "../../i18n";
 
 interface BranchSwitcherProps {
   currentBranch: string;
@@ -8,6 +9,7 @@ interface BranchSwitcherProps {
 }
 
 export default function BranchSwitcher({ currentBranch, onCheckedOut }: BranchSwitcherProps) {
+  const { t } = useI18n();
   const { branches, unavailable, checkout, checkingOut, error } = useBranches();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -55,7 +57,7 @@ export default function BranchSwitcher({ currentBranch, onCheckedOut }: BranchSw
         className="flex items-center gap-1 rounded px-1 py-0.5 text-[12px] text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg disabled:opacity-50"
       >
         <IconGitBranch size={13} />
-        {checkingOut ? "切换中…" : currentBranch}
+        {checkingOut ? t.git.switchingBranch : currentBranch}
         <IconChevronDown size={11} />
       </button>
 
@@ -63,7 +65,7 @@ export default function BranchSwitcher({ currentBranch, onCheckedOut }: BranchSw
         <div className="absolute left-0 top-full z-10 mt-1 max-h-64 w-48 overflow-y-auto rounded-sm border border-vscode-border-light bg-vscode-panel-header py-1 shadow-lg">
           {error && <div className="px-2 py-1 text-[11px] text-git-deleted">{error}</div>}
           {branches.length === 0 && !error && (
-            <div className="px-2 py-1 text-[11px] text-vscode-fg-dim">没有本地分支</div>
+            <div className="px-2 py-1 text-[11px] text-vscode-fg-dim">{t.git.noLocalBranches}</div>
           )}
           {branches.map((b) => (
             <button

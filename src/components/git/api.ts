@@ -1,5 +1,6 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { CommitInfo, FileEntry, GitStatus } from "./types";
+import { detectLanguage, translations } from "../../i18n";
 
 const NOT_TAURI = "NOT_TAURI";
 
@@ -16,7 +17,8 @@ async function call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> 
   try {
     return await invoke<T>(cmd, args);
   } catch (err) {
-    const message = typeof err === "string" ? err : err instanceof Error ? err.message : "未知错误";
+    const message =
+      typeof err === "string" ? err : err instanceof Error ? err.message : translations[detectLanguage()].common.unknownError;
     throw new GitApiError(message);
   }
 }

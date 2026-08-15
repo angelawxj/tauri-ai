@@ -1,3 +1,5 @@
+import { useI18n } from "../../i18n";
+
 export interface TabDef {
   id: string;
   label: string;
@@ -11,6 +13,7 @@ interface TabBarProps {
 }
 
 export default function TabBar({ tabs, activeId, onChange }: TabBarProps) {
+  const { t } = useI18n();
   return (
     <div className="flex h-9 shrink-0 items-stretch border-b border-vscode-border bg-vscode-panel-header">
       {tabs.map((tab) => {
@@ -21,7 +24,7 @@ export default function TabBar({ tabs, activeId, onChange }: TabBarProps) {
             type="button"
             disabled={tab.disabled}
             onClick={() => onChange(tab.id)}
-            title={tab.disabled ? "即将支持" : undefined}
+            title={tab.disabled ? t.tabs.comingSoon : undefined}
             className={`relative px-3 text-[12px] transition-colors ${
               tab.disabled
                 ? "cursor-not-allowed text-vscode-fg-dim"

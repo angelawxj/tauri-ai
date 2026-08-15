@@ -3,6 +3,7 @@ import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerE
 import { IconChevronDown, IconChevronRight, IconRefresh } from "../icons";
 import { computeSwimlanes } from "./commit-graph";
 import { useGitHistory } from "./useGitHistory";
+import { useI18n } from "../../i18n";
 import CommitRow from "./CommitRow";
 
 const MIN_HEIGHT = 120;
@@ -22,6 +23,7 @@ interface HistoryPanelProps {
 }
 
 export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryPanelProps) {
+  const { t } = useI18n();
   const { commits, loading, error, unavailable, refresh, expanded, toggleExpanded, filesFor, isFilesLoading } =
     useGitHistory(refreshSignal);
   const [collapsed, setCollapsed] = useState(false);
@@ -75,7 +77,7 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
         <div
           role="separator"
           aria-orientation="horizontal"
-          aria-label="调整提交历史面板高度"
+          aria-label={t.git.resizeHistoryPanel}
           aria-valuenow={height}
           tabIndex={0}
           onPointerDown={onDragStart}
@@ -93,11 +95,11 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
       >
         {collapsed ? <IconChevronRight size={13} /> : <IconChevronDown size={13} />}
         <span className="flex-1 truncate">
-          Commits {commits.length > 0 && <span className="text-vscode-fg-dim">({commits.length})</span>}
+          {t.git.commitHistoryTitle} {commits.length > 0 && <span className="text-vscode-fg-dim">({commits.length})</span>}
         </span>
         <button
           type="button"
-          title="刷新"
+          title={t.common.refresh}
           onClick={(e) => {
             e.stopPropagation();
             void refresh();
@@ -110,13 +112,13 @@ export default function HistoryPanel({ refreshSignal, headBranchName }: HistoryP
 
       {!collapsed && (
         <div className="overflow-y-auto" style={{ height }}>
-          {unavailable && <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">未连接 Git 后端</div>}
+          {unavailable && <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">{t.git.notConnected}</div>}
           {!unavailable && error && <div className="px-3 py-2 text-[11.5px] text-git-deleted">{error}</div>}
           {!unavailable && !error && loading && (
-            <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">加载中…</div>
+            <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">{t.git.loadingHistory}</div>
           )}
           {!unavailable && !error && !loading && commits.length === 0 && (
-            <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">暂无提交记录</div>
+            <div className="px-3 py-2 text-[11.5px] text-vscode-fg-dim">{t.git.noCommitsYet}</div>
           )}
           {!unavailable &&
             !error &&
