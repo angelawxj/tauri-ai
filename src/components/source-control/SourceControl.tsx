@@ -65,11 +65,14 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     void refreshOutgoingStatus();
   }, [status?.branch]);
 
+  // This is a branch comparison (base..HEAD), not a history cache.  A commit,
+  // push, pull, or an external Git client can change HEAD while the branch name
+  // stays the same, so key this request off the status snapshot itself.
   useEffect(() => {
     let cancelled = false;
     api.committedFiles().then((entries) => { if (!cancelled) setCommittedFiles(entries); }).catch(() => { if (!cancelled) setCommittedFiles([]); });
     return () => { cancelled = true; };
-  }, [historyTick, status?.branch]);
+  }, [status]);
 
   useEffect(() => {
     if (!actionMessage) return;
