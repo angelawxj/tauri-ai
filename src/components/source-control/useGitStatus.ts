@@ -23,6 +23,7 @@ export function useGitStatus(): UseGitStatusResult {
   const sameStatus = (left: GitStatus | null, right: GitStatus): boolean =>
     left?.branch === right.branch &&
     left.head === right.head &&
+    left.upstreamHead === right.upstreamHead &&
     left.repoName === right.repoName &&
     left.repoPath === right.repoPath &&
     JSON.stringify(left.staged) === JSON.stringify(right.staged) &&

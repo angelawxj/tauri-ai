@@ -11,6 +11,8 @@ export interface GitStatus {
   branch: string;
   /** Current HEAD revision; changes even when the working tree stays clean. */
   head?: string | null;
+  /** Tracked upstream revision; changes after external push/fetch. */
+  upstreamHead?: string | null;
   repoName: string;
   repoPath: string;
   staged: FileEntry[];

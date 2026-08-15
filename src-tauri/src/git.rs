@@ -19,6 +19,10 @@ pub struct GitStatus {
     /// HEAD is included even on a clean working tree so the renderer can
     /// notice commits made by another Git client.
     pub head: Option<String>,
+    /// The tracked remote revision changes after an external push/fetch even
+    /// when HEAD and the working tree remain unchanged.
+    #[serde(rename = "upstreamHead")]
+    pub upstream_head: Option<String>,
     #[serde(rename = "repoName")]
     pub repo_name: String,
     #[serde(rename = "repoPath")]
@@ -177,6 +181,13 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
         Err(_) => ("(无提交)".to_string(), None),
     };
 
+    let upstream_head = repo
+        .find_branch(&branch, BranchType::Local)
+        .ok()
+        .and_then(|local| local.upstream().ok())
+        .and_then(|upstream| upstream.get().target())
+        .map(|oid| oid.to_string());
+
     let mut opts = git2::StatusOptions::new();
     opts.include_untracked(true).recurse_untracked_dirs(true);
     let statuses = repo.statuses(Some(&mut opts)).map_err(|e| e.to_string())?;
@@ -226,6 +237,7 @@ pub fn git_status(state: State<RepoState>) -> Result<GitStatus, String> {
     Ok(GitStatus {
         branch,
         head,
+        upstream_head,
         repo_name: root
             .file_name()
             .and_then(|name| name.to_str())

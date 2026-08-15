@@ -79,7 +79,7 @@ export default function CommitBox({
   };
 
   return (
-    <div className={`flex flex-col bg-vscode-bg px-3 pb-2 ${showMessage ? "gap-2.5 pt-1.5" : ""}`}>
+    <div className={`flex flex-col bg-vscode-bg px-3 pb-4 ${showMessage ? "gap-2.5 pt-1.5" : ""}`}>
       {showMessage && <textarea
         value={message}
         onChange={(e) => onMessageChange(e.target.value)}
