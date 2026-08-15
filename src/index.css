@@ -60,7 +60,8 @@
   --color-vscode-button-hover: #005a9e;
   --color-vscode-button-fg: #ffffff;
   --color-vscode-input-bg: #ffffff;
-  --color-vscode-input-border: #cecece;
+  /* Match Orca's outline controls: subtle rather than VS Code's darker input edge. */
+  --color-vscode-input-border: #e5e5e5;
   --color-vscode-list-hover: #e8e8e8;
   --color-vscode-list-active: #cce4f7;
   --color-vscode-list-inactive: #e4e6f1;

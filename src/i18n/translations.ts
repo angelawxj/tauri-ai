@@ -67,6 +67,7 @@ export interface TranslationDict {
     committedChangesTitle: string;
     discardAllChanges: string;
     stageAllChanges: string;
+    stageAllShort: string;
     publishBranch: string;
     moreCommitActions: string;
     filterFiles: string;
@@ -194,6 +195,7 @@ const zh: TranslationDict = {
     committedChangesTitle: "已提交的更改",
     discardAllChanges: "丢弃全部更改",
     stageAllChanges: "暂存全部更改",
+    stageAllShort: "暂存全部",
     publishBranch: "发布分支",
     moreCommitActions: "更多提交和远程操作",
     filterFiles: "筛选文件…",
@@ -216,7 +218,7 @@ const zh: TranslationDict = {
     discardChanges: "丢弃更改",
     stageChanges: "暂存更改",
     unstage: "取消暂存",
-    commitPlaceholder: "提交消息 (Ctrl+Enter 提交)",
+    commitPlaceholder: "信息",
     commitTitle: "提交 (Ctrl+Enter)",
     committing: "提交中…",
     commit: "提交",
@@ -321,6 +323,7 @@ const en: TranslationDict = {
     committedChangesTitle: "Committed Changes",
     discardAllChanges: "Discard All Changes",
     stageAllChanges: "Stage All Changes",
+    stageAllShort: "Stage All",
     publishBranch: "Publish Branch",
     moreCommitActions: "More commit and remote actions",
     filterFiles: "Filter files…",
@@ -343,7 +346,7 @@ const en: TranslationDict = {
     discardChanges: "Discard Changes",
     stageChanges: "Stage Changes",
     unstage: "Unstage",
-    commitPlaceholder: "Commit message (Ctrl+Enter to commit)",
+    commitPlaceholder: "Message",
     commitTitle: "Commit (Ctrl+Enter)",
     committing: "Committing…",
     commit: "Commit",

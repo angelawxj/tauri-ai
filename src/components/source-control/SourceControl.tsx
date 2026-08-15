@@ -50,6 +50,9 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const canCommit = !unavailable && conflicts.length === 0 && message.trim().length > 0 && staged.length > 0;
   const canStageAll = !unavailable && conflicts.length === 0 && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
   const canPushIdle = !unavailable && conflicts.length === 0 && hasOutgoingChanges && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
+  // Match Orca: hide the composer only for the true empty state. A branch can
+  // be clean locally but still have committed branch changes to review.
+  const showGenericEmptyState = !unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && committedFiles.length === 0;
 
   const refreshOutgoingStatus = async () => {
     try {
@@ -218,6 +221,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
         {conflicts.length === 0 && <CommitBox
           message={message}
           onMessageChange={setMessage}
+          showMessage={!showGenericEmptyState}
           onCommit={() => {
             if (canStageAll) {
               void withErrorHandling(async () => { await api.stageAll(); await refresh(); });
@@ -230,7 +234,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           canCommit={canCommit || canStageAll || canPushIdle}
           disabledReason={canStageAll || canPushIdle ? "" : disabledReason}
           committing={committing || pushing}
-          actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllChanges : undefined}
+          actionLabel={canPushIdle ? t.git.pushShort : canStageAll ? t.git.stageAllShort : undefined}
           actionTitle={canPushIdle ? t.git.push : canStageAll ? t.git.stageAllChanges : undefined}
           actionKind={canPushIdle ? "publish" : canStageAll ? "stage" : "commit"}
           onPush={() => void handlePush()}
@@ -259,9 +263,9 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
           <div className="px-3 py-2 text-[12px] text-git-added">{actionMessage}</div>
         )}
 
-        {!unavailable && !error && !loading && conflicts.length === 0 && staged.length === 0 && unstaged.length === 0 && untracked.length === 0 && committedFiles.length === 0 && (
+        {showGenericEmptyState && (
           <div className="px-4 py-6">
-            <div className="text-[13px] font-medium text-vscode-fg">{t.git.noChangesHeading}</div>
+            <div className="text-sm font-medium text-vscode-fg">{t.git.noChangesHeading}</div>
             <div className="mt-1 text-[12px] text-vscode-fg-dim">{t.git.noChangesSupportingText(baseRefName ?? t.git.baseRefFallback)}</div>
           </div>
         )}

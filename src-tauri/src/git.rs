@@ -661,18 +661,16 @@ pub fn git_committed_files(state: State<RepoState>) -> Result<Vec<FileEntry>, St
     };
     let branch_name = head.shorthand().unwrap_or("");
     // Orca's "Committed Changes" is a branch comparison, not a list of commits
-    // pending push. Prefer the configured/default base branch (origin/main here)
-    // before falling back to the current branch's tracking ref.
+    // pending push. The current branch's upstream is the primary comparison
+    // target; using origin/main first incorrectly shows old dev history after
+    // dev has already been pushed to origin/dev.
     let upstream_oid = repo
-        .find_reference("refs/remotes/origin/main")
+        .find_branch(branch_name, BranchType::Local)
         .ok()
-        .and_then(|reference| reference.target())
-        .or_else(|| repo.find_reference("refs/heads/main").ok().and_then(|reference| reference.target()))
-        .or_else(|| repo
-            .find_branch(branch_name, BranchType::Local)
-            .ok()
-            .and_then(|branch| branch.upstream().ok())
-            .and_then(|branch| branch.get().target()));
+        .and_then(|branch| branch.upstream().ok())
+        .and_then(|branch| branch.get().target())
+        .or_else(|| repo.find_reference("refs/remotes/origin/main").ok().and_then(|reference| reference.target()))
+        .or_else(|| repo.find_reference("refs/heads/main").ok().and_then(|reference| reference.target()));
     let Some(upstream_oid) = upstream_oid else { return Ok(Vec::new()) };
     let base_oid = repo.merge_base(head_oid, upstream_oid).unwrap_or(upstream_oid);
     if base_oid == head_oid {

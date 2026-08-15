@@ -8,6 +8,7 @@ interface CommitBoxProps {
   onMessageChange: (value: string) => void;
   onCommit: () => void;
   canCommit: boolean;
+  showMessage?: boolean;
   disabledReason: string;
   committing: boolean;
   actionLabel?: string;
@@ -30,6 +31,7 @@ export default function CommitBox({
   onMessageChange,
   onCommit,
   canCommit,
+  showMessage = true,
   disabledReason,
   committing,
   actionLabel,
@@ -77,17 +79,17 @@ export default function CommitBox({
   };
 
   return (
-    <div className="flex flex-col gap-1.5 border-b border-vscode-border bg-vscode-bg px-3 pb-2 pt-1.5">
-      <textarea
+    <div className={`flex flex-col bg-vscode-bg px-3 pb-2 ${showMessage ? "gap-2.5 pt-1.5" : ""}`}>
+      {showMessage && <textarea
         value={message}
         onChange={(e) => onMessageChange(e.target.value)}
         onKeyDown={onKeyDown}
         placeholder={t.git.commitPlaceholder}
         rows={3}
-        className="min-h-14 w-full resize-none rounded-md border border-vscode-input-border bg-vscode-input-bg px-2 py-1.5 text-xs text-vscode-fg shadow-sm placeholder:text-vscode-fg-dim focus:border-vscode-accent focus:outline-none"
-      />
+        className="min-h-14 w-full resize-none rounded-md border border-vscode-input-border bg-vscode-input-bg px-2 py-1.5 text-xs text-vscode-fg shadow-[0_1px_2px_rgba(0,0,0,0.05)] transition-[color,box-shadow] placeholder:text-vscode-fg-dim focus:border-vscode-accent focus:outline-none"
+      />}
       <div className="relative flex items-stretch">
-        <button type="button" onClick={onCommit} disabled={!canCommit || committing} title={canCommit ? actionTitle ?? t.git.commitTitle : disabledReason} className={`flex flex-1 items-center justify-center gap-1.5 border px-3 py-1.5 text-[13px] font-medium disabled:cursor-not-allowed disabled:opacity-45 ${hasMoreActions ? "rounded-l-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover" : "rounded-md border-vscode-button bg-vscode-button text-vscode-button-fg hover:bg-vscode-button-hover"}`}>
+        <button type="button" onClick={onCommit} disabled={!canCommit || committing} title={canCommit ? actionTitle ?? t.git.commitTitle : disabledReason} className={`flex h-6 flex-1 items-center justify-center gap-1 border border-vscode-input-border bg-vscode-input-bg px-3 text-[11px] font-medium text-vscode-fg shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-50 ${hasMoreActions ? "rounded-l-md" : "rounded-md"}`}>
           {committing ? <IconRefresh size={13} className="animate-spin" /> : actionKind === "publish" ? <IconUpload size={13} /> : actionKind === "stage" ? <IconPlus size={13} /> : <IconCheck size={13} />}
           {committing ? actionLabel ?? t.git.committing : actionLabel ?? t.git.commit}
         </button>
@@ -95,7 +97,7 @@ export default function CommitBox({
           const rect = menuButtonRef.current?.getBoundingClientRect();
           if (rect) setMenuPosition({ left: Math.max(8, Math.min(rect.right - 240, window.innerWidth - 248)), top: rect.bottom + 4 });
           setMenuOpen((open) => !open);
-        }} className="w-10 rounded-r-md border border-vscode-button bg-vscode-button px-2 text-vscode-button-fg hover:bg-vscode-button-hover disabled:cursor-not-allowed disabled:opacity-45"><IconChevronDown size={13} /></button>}
+        }} className="flex h-6 w-8 items-center justify-center rounded-r-md border border-vscode-input-border bg-vscode-input-bg p-0 text-vscode-fg shadow-[0_1px_2px_rgba(0,0,0,0.05)] hover:bg-vscode-list-hover disabled:cursor-not-allowed disabled:opacity-50"><IconChevronDown size={12} /></button>}
       </div>
       {menuOpen && menuPosition && createPortal(
         <div ref={menuRef} role="menu" className="fixed z-[100] min-w-60 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-xl" style={menuPosition}>
