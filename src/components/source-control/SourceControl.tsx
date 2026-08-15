@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconRefresh, IconSearch, IconUpload, IconX } from "../icons";
 import { api } from "./api";
 import { useGitStatus } from "./useGitStatus";
@@ -24,6 +24,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
   const [pushing, setPushing] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [filterQuery, setFilterQuery] = useState("");
+  const [hasOutgoingChanges, setHasOutgoingChanges] = useState(false);
 
   const staged = status?.staged ?? [];
   const unstaged = (status?.unstaged ?? []).filter((entry) => entry.status !== "U");
@@ -42,7 +43,26 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
 
   const canCommit = !unavailable && message.trim().length > 0 && staged.length > 0;
   const canStageAll = !unavailable && staged.length === 0 && (unstaged.length > 0 || untracked.length > 0);
-  const canPushIdle = !unavailable && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
+  const canPushIdle = !unavailable && hasOutgoingChanges && Boolean(status?.branch) && staged.length === 0 && unstaged.length === 0 && untracked.length === 0;
+
+  const refreshOutgoingStatus = async () => {
+    try {
+      const context = await api.historyContext();
+      setHasOutgoingChanges(context.hasOutgoingChanges);
+    } catch {
+      setHasOutgoingChanges(false);
+    }
+  };
+
+  useEffect(() => {
+    void refreshOutgoingStatus();
+  }, [status?.branch]);
+
+  useEffect(() => {
+    if (!actionMessage) return;
+    const timer = window.setTimeout(() => setActionMessage(null), 3000);
+    return () => window.clearTimeout(timer);
+  }, [actionMessage]);
 
   const withErrorHandling = async (fn: () => Promise<void>) => {
     setActionMessage(null);
@@ -61,6 +81,7 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
       await api.commit(message.trim());
       setMessage("");
       await refresh();
+      await refreshOutgoingStatus();
       setHistoryTick((t) => t + 1);
     });
     setCommitting(false);
@@ -79,6 +100,9 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
     await withErrorHandling(async () => {
       await api.push(status.branch);
       setActionMessage(t.git.pushedTo(status.branch));
+      await refresh();
+      await refreshOutgoingStatus();
+      setHistoryTick((t) => t + 1);
     });
     setPushing(false);
   };
@@ -91,12 +115,13 @@ export default function SourceControl({ onOpenDiff }: SourceControlProps) {
       await api.push(status.branch);
       setMessage("");
       await refresh();
+      await refreshOutgoingStatus();
       setHistoryTick((t) => t + 1);
     });
     setCommitting(false);
   };
   const runRemoteAction = async (action: () => Promise<unknown>) => {
-    await withErrorHandling(async () => { await action(); await refresh(); setHistoryTick((tick) => tick + 1); });
+    await withErrorHandling(async () => { await action(); await refresh(); await refreshOutgoingStatus(); setHistoryTick((tick) => tick + 1); });
   };
   const handleForcePush = () => {
     if (!status?.branch || !window.confirm(t.git.confirmForcePush(status.branch))) return;
