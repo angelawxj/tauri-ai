@@ -1,12 +1,17 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+mod explorer;
 mod source_control;
 
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .manage(source_control::git::RepoState::new())
+        .manage(explorer::fs::ExplorerState::new())
         .invoke_handler(tauri::generate_handler![
+            explorer::fs::explorer_set_current_project,
+            explorer::fs::explorer_list_dir,
+            explorer::fs::explorer_read_file,
             source_control::git::set_current_project,
             source_control::git::git_status,
             source_control::git::git_stage,

@@ -7,10 +7,19 @@ import { useTheme } from "./hooks/useTheme";
 import { useProjects } from "./hooks/useProjects";
 import { api } from "./features/source-control/api";
 import type { OpenDiffRequest } from "./features/source-control";
+import { api as explorerApi } from "./features/explorer/api";
+import type { OpenFileRequest } from "./features/explorer";
+import type { Artifact } from "./components/layout/types";
+import type { PoppedBrowser } from "./components/layout/Browser";
 
 export default function App() {
   const [theme, toggleTheme] = useTheme();
   const [openDiff, setOpenDiff] = useState<OpenDiffRequest | null>(null);
+  const [openFile, setOpenFile] = useState<OpenFileRequest | null>(null);
+  const [browserArtifact, setBrowserArtifact] = useState<Artifact | null>(null);
+  const [artifacts, setArtifacts] = useState<Artifact[]>([]);
+  const [textArtifactRequest, setTextArtifactRequest] = useState<Artifact | null>(null);
+  const [openBrowserTab, setOpenBrowserTab] = useState<PoppedBrowser | null>(null);
   const { projects, activeProject, setActiveId, addProject, removeProject } = useProjects();
   const [projectError, setProjectError] = useState<string | null>(null);
   const seededRef = useRef(false);
@@ -36,6 +45,8 @@ export default function App() {
   }, []);
 
   // Keep the Rust-side "current repo" pointer in sync with the active project.
+  // Source Control and Explorer are independent modules with their own backend
+  // state, so both need to be told about the switch.
   useEffect(() => {
     if (!activeProject) return;
     void (async () => {
@@ -46,7 +57,13 @@ export default function App() {
         setProjectError(err instanceof Error ? err.message : String(err));
       }
     })();
+    void explorerApi.setCurrentProject(activeProject.path).catch(() => {
+      // Explorer surfaces its own connection/error state; nothing to do here.
+    });
   }, [activeProject?.path]);
+
+  // 右侧「产物」Tab 点了一个非可渲染产物：每次都换成新对象引用，保证重复点同一条也能重新触发打开
+  const handleOpenTextArtifact = (artifact: Artifact) => setTextArtifactRequest({ ...artifact });
 
   const handleAddProject = async () => {
     try {
@@ -71,8 +88,27 @@ export default function App() {
         onRemoveProject={removeProject}
         projectError={projectError}
       />
-      <MainArea openDiff={openDiff} onCloseDiff={() => setOpenDiff(null)} />
-      <DetailPanel onOpenDiff={(path, staged) => setOpenDiff({ path, staged })} projectKey={activeProject?.id} />
+      <MainArea
+        openDiff={openDiff}
+        onCloseDiff={() => setOpenDiff(null)}
+        openFile={openFile}
+        onCloseFile={() => setOpenFile(null)}
+        onOpenRenderableArtifact={setBrowserArtifact}
+        onArtifactCreated={(a) => setArtifacts((prev) => [...prev, a])}
+        textArtifactRequest={textArtifactRequest}
+        openBrowser={openBrowserTab}
+        onCloseBrowser={() => setOpenBrowserTab(null)}
+      />
+      <DetailPanel
+        onOpenDiff={(path, staged) => setOpenDiff({ path, staged })}
+        onOpenFile={(path) => setOpenFile({ path })}
+        browserArtifact={browserArtifact}
+        artifacts={artifacts}
+        onOpenTextArtifact={handleOpenTextArtifact}
+        onPopOutBrowser={setOpenBrowserTab}
+        projectKey={activeProject?.id}
+        projectName={activeProject?.name}
+      />
     </div>
   );
 }

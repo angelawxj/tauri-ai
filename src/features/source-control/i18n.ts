@@ -51,10 +51,10 @@ export function useSourceControlI18n() {
   useEffect(() => {
     const refresh = () => setLanguage(detectSourceControlLanguage());
     window.addEventListener("storage", refresh);
-    window.addEventListener("source-control-language-change", refresh);
+    window.addEventListener("app-language-change", refresh);
     return () => {
       window.removeEventListener("storage", refresh);
-      window.removeEventListener("source-control-language-change", refresh);
+      window.removeEventListener("app-language-change", refresh);
     };
   }, []);
 

@@ -17,7 +17,9 @@ export function I18nProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, lang);
     document.documentElement.lang = lang === "zh" ? "zh-CN" : "en";
-    window.dispatchEvent(new Event("source-control-language-change"));
+    // Generic hook for self-contained feature packages (source-control, explorer, ...)
+    // that keep their own i18n copy in sync with the host's language toggle.
+    window.dispatchEvent(new Event("app-language-change"));
   }, [lang]);
 
   const value = useMemo<I18nContextValue>(

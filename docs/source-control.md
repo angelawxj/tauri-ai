@@ -1,6 +1,6 @@
 # Source Control 模块
 
-右侧面板的「Source Control」Tab，是参照开源项目 Orca（[stablyai/orca](https://github.com/stablyai/orca)，MIT 协议）的源代码管理面板风格重做的版本，是 [Git 管理](./git-panel.md) 的加强版，两者代码完全独立、互不依赖。
+右侧面板的「Source Control」Tab，是参照开源项目 Orca（[stablyai/orca](https://github.com/stablyai/orca)，MIT 协议）的源代码管理面板风格重做的版本：内联 stage/unstage/discard、点文件在中间区域打开 diff 标签页、分支切换、提交历史图、Push。
 
 ## 功能
 
@@ -52,9 +52,9 @@ App.tsx
 
 `FileRow` 点击时只是把 `{path, staged}` 往上传，真正发请求拉 diff 内容的是 `DiffTab.tsx`（在它自己的 `useEffect` 里调用 `api.diff`）。`MainArea.tsx` 用 `openDiff` 是否为空来决定要不要在 tab 栏里显示「Diff · 文件名」这个标签。
 
-## 对应的 Rust 命令（`src-tauri/src/git.rs`）
+## 对应的 Rust 命令（`src-tauri/src/source_control/git.rs`）
 
-除了和 [Git 管理](./git-panel.md) 共用的 `git_status/git_stage/.../git_log/git_commit_files` 之外，这个模块还用到：
+除了 `git_status/git_stage/.../git_log/git_commit_files` 之外，这个模块还用到：
 
 | 前端调用 (`api.ts`) | Tauri 命令 | 作用 |
 |---|---|---|

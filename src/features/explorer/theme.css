@@ -1,0 +1,20 @@
+/* Self-contained Explorer palette, colors taken directly from Orca's dark/light
+   theme tokens (src/renderer/src/assets/main.css: --sidebar/--foreground/
+   --muted-foreground/--accent/--border/--input/--ring) so the panel matches
+   Orca's FileExplorer 1:1 instead of reusing this app's VS Code palette. */
+@theme {
+  --color-vscode-bg: #171717; --color-vscode-panel: #171717; --color-vscode-border: rgb(255 255 255 / 0.07); --color-vscode-border-light: rgb(255 255 255 / 0.15);
+  --color-vscode-fg: #fafafa; --color-vscode-fg-muted: #a1a1a1; --color-vscode-fg-dim: #737373; --color-vscode-accent: #737373;
+  --color-vscode-input-bg: rgb(255 255 255 / 0.06); --color-vscode-input-border: rgb(255 255 255 / 0.15); --color-vscode-list-hover: #404040; --color-vscode-list-active: #404040; --color-vscode-badge-bg: #262626;
+}
+.explorer-theme {
+  --color-vscode-bg: #171717; --color-vscode-panel: #171717; --color-vscode-border: rgb(255 255 255 / 0.07); --color-vscode-border-light: rgb(255 255 255 / 0.15);
+  --color-vscode-fg: #fafafa; --color-vscode-fg-muted: #a1a1a1; --color-vscode-fg-dim: #737373; --color-vscode-accent: #737373;
+  --color-vscode-input-bg: rgb(255 255 255 / 0.06); --color-vscode-input-border: rgb(255 255 255 / 0.15); --color-vscode-list-hover: #404040; --color-vscode-list-active: #404040; --color-vscode-badge-bg: #262626;
+}
+
+:root[data-theme="light"] .explorer-theme {
+  --color-vscode-bg: #fafafa; --color-vscode-panel: #fafafa; --color-vscode-border: #e5e5e5; --color-vscode-border-light: #d4d4d4;
+  --color-vscode-fg: #0a0a0a; --color-vscode-fg-muted: #737373; --color-vscode-fg-dim: #8a8a8a; --color-vscode-accent: #a1a1a1;
+  --color-vscode-input-bg: rgb(0 0 0 / 0.03); --color-vscode-input-border: #e5e5e5; --color-vscode-list-hover: #f5f5f5; --color-vscode-list-active: #f5f5f5; --color-vscode-badge-bg: #f5f5f5;
+}
