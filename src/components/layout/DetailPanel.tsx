@@ -1,14 +1,30 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import TabBar, { type TabDef } from "./TabBar";
-import { GitPanel } from "../git";
+import { IconCompass, IconFile, IconFiles, IconGitBranch, IconSparkle, IconTerminal } from "../icons";
+import { Explorer } from "../../features/explorer";
 import { SourceControl } from "../../features/source-control";
 import { useI18n } from "../../i18n";
+import Browser, { type BrowserSource, type PoppedBrowser } from "./Browser";
+import ArtifactList from "./ArtifactList";
+import { isRenderableName } from "./artifact-kind";
+import type { Artifact } from "./types";
 
 interface DetailPanelProps {
   onOpenDiff?: (path: string, staged: boolean) => void;
-  /** Remount key for the git/source-control panels; change it when the active project switches. */
+  onOpenFile?: (path: string) => void;
+  /** HTML/Markdown artifacts from the chat; opens/loads them in the 浏览器 tab. */
+  browserArtifact?: Artifact | null;
+  /** 对话里生成过的全部产物，供「产物」Tab 展示。 */
+  artifacts: Artifact[];
+  /** 「产物」Tab 里点了一个非 HTML/Markdown 的产物，请求宿主在 MainArea 打开它。 */
+  onOpenTextArtifact: (artifact: Artifact) => void;
+  /** 浏览器 Tab 里点了"在中间区域打开"，请求宿主在 MainArea 开一个宽屏标签页。 */
+  onPopOutBrowser: (popped: PoppedBrowser) => void;
+  /** Remount key for the explorer/source-control panels; change it when the active project switches. */
   projectKey?: string;
+  /** 当前项目名，展示在资源管理器头部（对齐 Orca 的 FileExplorerToolbar 显示 repoName 的方式）。 */
+  projectName?: string;
 }
 
 const WIDTH_STORAGE_KEY = "detailPanelWidth";
@@ -22,22 +38,53 @@ function readStoredWidth(): number {
   return Math.min(Math.max(raw, MIN_WIDTH), MAX_WIDTH);
 }
 
-export default function DetailPanel({ onOpenDiff, projectKey }: DetailPanelProps) {
+export default function DetailPanel({ onOpenDiff, onOpenFile, browserArtifact, artifacts, onOpenTextArtifact, onPopOutBrowser, projectKey, projectName }: DetailPanelProps) {
   const { t } = useI18n();
-  const [activeId, setActiveId] = useState("git");
+  const [activeId, setActiveId] = useState("explorer");
   const [width, setWidth] = useState(readStoredWidth);
+  const [browserSource, setBrowserSource] = useState<BrowserSource | null>(null);
   const dragState = useRef<{ startX: number; startWidth: number } | null>(null);
 
   const TABS: TabDef[] = [
-    { id: "git", label: t.tabs.git },
-    { id: "source-control", label: t.tabs.sourceControl },
-    { id: "files", label: t.tabs.files, disabled: true },
-    { id: "terminal", label: t.tabs.terminal, disabled: true },
+    { id: "explorer", label: t.tabs.explorer, icon: IconFiles },
+    { id: "source-control", label: t.tabs.sourceControl, icon: IconGitBranch },
+    { id: "browser", label: t.tabs.browser, icon: IconCompass },
+    { id: "artifacts", label: t.tabs.artifacts, icon: IconSparkle },
+    { id: "files", label: t.tabs.files, icon: IconFile, disabled: true },
+    { id: "terminal", label: t.tabs.terminal, icon: IconTerminal, disabled: true },
   ];
+
+  // 「产物」Tab 里点一条：HTML/Markdown 直接在本面板的浏览器 Tab 渲染；
+  // 其它类型冒泡给宿主，在 MainArea 打开只读标签页。
+  const handleOpenArtifact = (artifact: Artifact) => {
+    if (isRenderableName(artifact.name)) {
+      setBrowserSource({ kind: "artifact", name: artifact.name, content: artifact.content });
+      setActiveId("browser");
+      return;
+    }
+    onOpenTextArtifact(artifact);
+  };
 
   useEffect(() => {
     localStorage.setItem(WIDTH_STORAGE_KEY, String(width));
   }, [width]);
+
+  // 资源管理器点 html/md 文件时，改到浏览器 Tab 渲染，而不是走原来的纯文本文件预览
+  const handleExplorerOpenFile = (path: string) => {
+    if (isRenderableName(path)) {
+      setBrowserSource({ kind: "path", path });
+      setActiveId("browser");
+      return;
+    }
+    onOpenFile?.(path);
+  };
+
+  // 对话区点了可渲染的产物卡片，切到浏览器 Tab 并加载内容
+  useEffect(() => {
+    if (!browserArtifact) return;
+    setBrowserSource({ kind: "artifact", name: browserArtifact.name, content: browserArtifact.content });
+    setActiveId("browser");
+  }, [browserArtifact]);
 
   const onDragStart = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
@@ -74,8 +121,10 @@ export default function DetailPanel({ onOpenDiff, projectKey }: DetailPanelProps
       <div className="flex h-full min-w-0 flex-1 flex-col border-l border-vscode-border bg-vscode-panel">
         <TabBar tabs={TABS} activeId={activeId} onChange={setActiveId} />
         <div className="min-h-0 flex-1">
-          {activeId === "git" && <GitPanel key={projectKey} />}
+          {activeId === "explorer" && <Explorer key={projectKey} projectName={projectName} onOpenFile={handleExplorerOpenFile} />}
           {activeId === "source-control" && <SourceControl key={projectKey} onOpenDiff={onOpenDiff} />}
+          {activeId === "browser" && <Browser source={browserSource} onPopOut={onPopOutBrowser} />}
+          {activeId === "artifacts" && <ArtifactList artifacts={artifacts} onOpen={handleOpenArtifact} />}
         </div>
       </div>
     </aside>

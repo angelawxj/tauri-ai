@@ -40,22 +40,6 @@ export function IconSettings({ size = 16, className }: IconProps) {
   );
 }
 
-export function IconChevronRight({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M6 3.5 10.5 8 6 12.5" />
-    </svg>
-  );
-}
-
-export function IconChevronDown({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M3.5 6 8 10.5 12.5 6" />
-    </svg>
-  );
-}
-
 export function IconGitBranch({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
@@ -77,54 +61,11 @@ export function IconRefresh({ size = 16, className }: IconProps) {
   );
 }
 
-export function IconCheck({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M3 8.3 6.3 11.5 13 4.5" />
-    </svg>
-  );
-}
-
-export function IconMore({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className} strokeWidth={2.2}>
-      <path d="M3.5 8h.01M8 8h.01M12.5 8h.01" />
-    </svg>
-  );
-}
-
 export function IconFile({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
       <path d="M4 1.8h5.2L12 4.6v9.6H4z" />
       <path d="M9.2 1.8v2.8H12" />
-    </svg>
-  );
-}
-
-/** Orca-style code document glyph used by Source Control file rows. */
-export function IconCommitFile({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M4 1.8h5.2L12 4.6v9.6H4z" />
-      <path d="M9.2 1.8v2.8H12M6.4 7.2 4.9 8.6l1.5 1.4M9.6 7.2l1.5 1.4-1.5 1.4" />
-    </svg>
-  );
-}
-
-export function IconUndo({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M4 4.5H10a3.5 3.5 0 0 1 0 7H7" />
-      <path d="M6 2 3.5 4.5 6 7" />
-    </svg>
-  );
-}
-
-export function IconMinus({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M2.8 8h10.4" />
     </svg>
   );
 }
@@ -164,15 +105,6 @@ export function IconMoon({ size = 16, className }: IconProps) {
   );
 }
 
-export function IconUpload({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <path d="M8 12.5V4M8 4 4.5 7.5M8 4l3.5 3.5" />
-      <path d="M3 13.5h10" />
-    </svg>
-  );
-}
-
 export function IconFolder({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
@@ -189,7 +121,57 @@ export function IconX({ size = 16, className }: IconProps) {
   );
 }
 
-/** 用于“用 AI 解决”等 AI 相关操作，样式对齐 Orca 的 lucide Sparkles 图标 */
+/** 资源管理器 Tab 图标：等比缩放自 lucide 的 Files 图标（堆叠文档），对齐 Orca 右侧栏用的图标 */
+export function IconFiles({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M10 1.33H7.33a1.33 1.33 0 0 0-1.33 1.33v7.33a1.33 1.33 0 0 0 1.33 1.33h5.33a1.33 1.33 0 0 0 1.33-1.33V5.33" />
+      <path d="M11.14 1.8A1.6 1.6 0 0 0 10 1.33v3.33a0.67 0.67 0 0 0 0.67 0.67h3.33a1.6 1.6 0 0 0-0.47-1.14z" />
+      <path d="M3.33 4.67a1.33 1.33 0 0 0-1.33 1.33v7.33a1.33 1.33 0 0 0 1.33 1.33h5.33a1.33 1.33 0 0 0 1.15-0.67" />
+    </svg>
+  );
+}
+
+/** 对话 Tab 图标，一个简单的消息气泡 */
+export function IconMessageCircle({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M2 8.2c0-3.1 2.7-5.6 6-5.6s6 2.5 6 5.6-2.7 5.6-6 5.6c-.7 0-1.4-.1-2-.3L3 14.5l.8-2.7C2.7 10.8 2 9.6 2 8.2Z" />
+    </svg>
+  );
+}
+
+/** 终端 Tab 图标 */
+export function IconTerminal({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <rect x="1.8" y="2.8" width="12.4" height="10.4" rx="1.2" />
+      <path d="M4.2 6.2 6.8 8l-2.6 1.8M8 10.8h3.4" />
+    </svg>
+  );
+}
+
+/** "在中间区域打开"按钮图标：方框 + 右上箭头，对齐常见的 external-link 语义 */
+export function IconExternalLink({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <path d="M6.5 3H3.6c-.66 0-1.2.54-1.2 1.2v7.2c0 .66.54 1.2 1.2 1.2h7.2c.66 0 1.2-.54 1.2-1.2V9.5" />
+      <path d="M8.8 2.7h4.5v4.5M13.1 2.9 7.6 8.4" />
+    </svg>
+  );
+}
+
+/** 浏览器 Tab 图标 */
+export function IconCompass({ size = 16, className }: IconProps) {
+  return (
+    <svg {...base(size)} className={className}>
+      <circle cx="8" cy="8" r="6.3" />
+      <path d="M10.3 5.7 9 9l-3.3 1.3L7 7Z" />
+    </svg>
+  );
+}
+
+/** 用于 AI 产物标签，样式对齐 Orca 的 lucide Sparkles 图标 */
 export function IconSparkle({ size = 16, className }: IconProps) {
   return (
     <svg {...base(size)} className={className}>
@@ -197,17 +179,6 @@ export function IconSparkle({ size = 16, className }: IconProps) {
       <path d="M13.333 1.333v2.667" />
       <path d="M14.667 2.667h-2.667" />
       <circle cx="2.667" cy="13.333" r="1.333" />
-    </svg>
-  );
-}
-
-/** Git 合并图标，用于“评审冲突”等操作，样式对齐 Orca 的 GitMerge 图标 */
-export function IconGitMerge({ size = 16, className }: IconProps) {
-  return (
-    <svg {...base(size)} className={className}>
-      <circle cx="12" cy="12" r="2" />
-      <circle cx="4" cy="4" r="2" />
-      <path d="M4 14V6a6 6 0 0 0 6 6" />
     </svg>
   );
 }

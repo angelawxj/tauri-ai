@@ -18,7 +18,7 @@
 这些能力已在功能包内提供；迁移时只需按目标项目替换语言适配：
 
 - `icons.tsx`：源码管理使用的本地图标
-- `i18n.ts`：源码管理中英文文案；宿主切换语言后派发 `source-control-language-change` 事件即可同步
+- `i18n.ts`：源码管理中英文文案；宿主切换语言后派发 `app-language-change` 事件即可同步
 - `theme.css`：明暗主题变量
 - 宿主页面提供的 `onOpenDiff` 回调
 
