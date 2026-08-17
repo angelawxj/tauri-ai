@@ -1,8 +1,10 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { ExplorerEntry } from "./types";
+import { listen } from "@tauri-apps/api/event";
+import type { ExplorerEntry, ExplorerSearchResult } from "./types";
 import { explorerTranslations, detectExplorerLanguage } from "./i18n";
 
 const NOT_TAURI = "NOT_TAURI";
+const WATCH_EVENT = "explorer://changed";
 
 export class ExplorerApiError extends Error {}
 
@@ -29,6 +31,27 @@ export function isApiUnavailable(error: unknown): boolean {
 
 export const api = {
   setCurrentProject: (path: string) => call<ExplorerEntry[]>("explorer_set_current_project", { path }),
-  listDir: (path?: string) => call<ExplorerEntry[]>("explorer_list_dir", { path }),
+  listDir: (path?: string, showGitIgnored?: boolean) => call<ExplorerEntry[]>("explorer_list_dir", { path, showGitIgnored }),
   readFile: (path: string) => call<string>("explorer_read_file", { path }),
+  createFile: (parentPath: string, name: string) => call<void>("explorer_create_file", { parentPath, name }),
+  createDir: (parentPath: string, name: string) => call<void>("explorer_create_dir", { parentPath, name }),
+  rename: (path: string, newName: string) => call<string>("explorer_rename", { path, newName }),
+  move: (sourcePath: string, destDir: string) => call<string>("explorer_move", { sourcePath, destDir }),
+  delete: (paths: string[]) => call<void>("explorer_delete", { paths }),
+  duplicate: (path: string) => call<string>("explorer_duplicate", { path }),
+  reveal: (path: string) => call<void>("explorer_reveal", { path }),
+  openCurrentProject: () => call<void>("explorer_open_current_project"),
+  openCurrentProjectInVsCode: () => call<void>("explorer_open_current_project_in_vscode"),
+  search: (query: string, caseSensitive: boolean, wholeWord: boolean, useRegex: boolean, includePattern: string, excludePattern: string) =>
+    call<ExplorerSearchResult>("explorer_search", { query, caseSensitive, wholeWord, useRegex, includePattern, excludePattern }),
+  findFiles: (query: string, showGitIgnored: boolean) => call<string[]>("explorer_find_files", { query, showGitIgnored }),
 };
+
+/** Fires whenever anything changes under the watched project root (no payload — just "re-check"). */
+export function onExplorerChanged(handler: () => void): () => void {
+  if (!isTauriRuntime()) return () => {};
+  const unlisten = listen(WATCH_EVENT, handler);
+  return () => {
+    void unlisten.then((fn) => fn());
+  };
+}

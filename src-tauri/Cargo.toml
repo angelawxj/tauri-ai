@@ -10,8 +10,13 @@ tauri-build = { version = "2", features = [] }
 [dependencies]
 tauri = { version = "2", features = [] }
 tauri-plugin-dialog = "2"
+tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
 git2 = "0.19"
+trash = "5"
+notify = "6"
+glob = "0.3"
+regex = "1"
 
 [profile.release]
 panic = "abort"

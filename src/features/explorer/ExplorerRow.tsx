@@ -1,83 +1,86 @@
-import { useState } from "react";
-import { IconChevronRight, IconFile, IconFolder, IconFolderOpen, IconLoader } from "./icons";
-import { api, isApiUnavailable } from "./api";
-import { useExplorerI18n } from "./i18n";
+import { IconChevronRight, IconFolder, IconFolderOpen, IconLoader } from "./icons";
+import { getFileTypeIcon } from "./fileTypeIcons";
+import { CircleSlash } from "lucide-react";
 import type { ExplorerEntry } from "./types";
+import type { FileStatus } from "../source-control/types";
+import { STATUS_COLOR_VALUE } from "../source-control/status";
 
 interface ExplorerRowProps {
   entry: ExplorerEntry;
   depth: number;
-  onOpenFile: (path: string) => void;
+  isExpanded: boolean;
+  isLoading: boolean;
+  isSelected: boolean;
+  isDropTarget: boolean;
+  gitStatus?: FileStatus;
+  onClick: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onContextMenu: (event: React.MouseEvent<HTMLButtonElement>) => void;
+  onDragStart: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragEnd: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragOver: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDragLeave: (event: React.DragEvent<HTMLButtonElement>) => void;
+  onDrop: (event: React.DragEvent<HTMLButtonElement>) => void;
 }
 
-export default function ExplorerRow({ entry, depth, onOpenFile }: ExplorerRowProps) {
-  const { t } = useExplorerI18n();
-  const [expanded, setExpanded] = useState(false);
-  const [children, setChildren] = useState<ExplorerEntry[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  // 对齐 Orca FileExplorerRow：每层缩进 16px + 8px 基础偏移
+/** 纯展示行：展开态/选中态/加载态/拖拽都由 Explorer.tsx 的集中状态驱动，自己不再维护任何 state。 */
+export default function ExplorerRow({
+  entry,
+  depth,
+  isExpanded,
+  isLoading,
+  isSelected,
+  isDropTarget,
+  gitStatus,
+  onClick,
+  onContextMenu,
+  onDragStart,
+  onDragEnd,
+  onDragOver,
+  onDragLeave,
+  onDrop,
+}: ExplorerRowProps) {
   const paddingLeft = depth * 16 + 8;
-
-  const toggle = () => {
-    if (!entry.isDir) {
-      onOpenFile(entry.path);
-      return;
-    }
-    if (!expanded && children === null) {
-      setLoading(true);
-      setError(null);
-      api
-        .listDir(entry.path)
-        .then((entries) => setChildren(entries))
-        .catch((err) => {
-          if (isApiUnavailable(err)) return;
-          setError(err instanceof Error ? err.message : t.explorer.loadDirFailed);
-        })
-        .finally(() => setLoading(false));
-    }
-    setExpanded((v) => !v);
-  };
+  const FileTypeIcon = getFileTypeIcon(entry.path);
 
   return (
-    <div>
-      <button
-        type="button"
-        onClick={toggle}
-        title={entry.path}
-        style={{ paddingLeft }}
-        className="flex w-full items-center gap-1 rounded-sm py-1 pr-2 text-left text-xs text-vscode-fg transition-colors hover:bg-vscode-list-hover"
-      >
-        {entry.isDir ? (
-          <IconChevronRight size={13} className={`shrink-0 text-vscode-fg-muted transition-transform ${expanded ? "rotate-90" : ""}`} />
-        ) : (
-          <span className="size-[13px] shrink-0" />
-        )}
-        {entry.isDir ? (
-          loading ? (
-            <IconLoader size={13} className="shrink-0 animate-spin text-vscode-fg-muted" />
-          ) : expanded ? (
-            <IconFolderOpen size={13} className="shrink-0 text-vscode-fg-muted" />
-          ) : (
-            <IconFolder size={13} className="shrink-0 text-vscode-fg-muted" />
-          )
-        ) : (
-          <IconFile size={13} className="shrink-0 text-vscode-fg-muted" />
-        )}
-        <span className="min-w-0 flex-1 truncate">{entry.name}</span>
-      </button>
-
-      {entry.isDir && expanded && (
-        <div>
-          {!loading && error && <div style={{ paddingLeft: paddingLeft + 20 }} className="py-1 text-[11px] text-red-400">{error}</div>}
-          {!loading && !error && children && children.length === 0 && (
-            <div style={{ paddingLeft: paddingLeft + 20 }} className="py-1 text-[11px] text-vscode-fg-dim">{t.explorer.emptyDirectory}</div>
-          )}
-          {!loading && !error && children?.map((child) => (
-            <ExplorerRow key={child.path} entry={child} depth={depth + 1} onOpenFile={onOpenFile} />
-          ))}
-        </div>
+    <button
+      type="button"
+      onClick={onClick}
+      onContextMenu={onContextMenu}
+      title={entry.path}
+      style={{ paddingLeft }}
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={entry.isDir ? onDragOver : undefined}
+      onDragLeave={entry.isDir ? onDragLeave : undefined}
+      onDrop={entry.isDir ? onDrop : undefined}
+      className={`flex w-full items-center gap-1 rounded-sm py-1 pr-2 text-left text-xs transition-colors ${
+        isSelected ? "bg-vscode-list-active text-vscode-fg" : "text-vscode-fg hover:bg-vscode-list-hover"
+      } ${isDropTarget ? "bg-vscode-accent/20 ring-1 ring-inset ring-vscode-accent" : ""}`}
+    >
+      {entry.isDir ? (
+        <IconChevronRight size={13} className={`shrink-0 text-vscode-fg-muted transition-transform ${isExpanded ? "rotate-90" : ""}`} />
+      ) : (
+        <span className="size-[13px] shrink-0" />
       )}
-    </div>
+      {entry.isDir ? (
+        isLoading ? (
+          <IconLoader size={13} className="shrink-0 animate-spin text-vscode-fg-muted" />
+        ) : isExpanded ? (
+          <IconFolderOpen size={13} className="shrink-0 text-vscode-fg-muted" />
+        ) : (
+          <IconFolder size={13} className="shrink-0 text-vscode-fg-muted" />
+        )
+      ) : (
+        <FileTypeIcon size={13} strokeWidth={2} className="shrink-0 text-vscode-fg-muted" />
+      )}
+      <span
+        className={`min-w-0 flex-1 truncate ${entry.ignored && !gitStatus ? "italic pr-0.5" : ""}`}
+        style={gitStatus ? { color: STATUS_COLOR_VALUE[gitStatus] } : entry.ignored ? { color: "var(--git-decoration-ignored)" } : undefined}
+      >{entry.name}</span>
+      {gitStatus && <span className="mr-2 ml-auto shrink-0 text-[10px] font-semibold tracking-wide" style={{ color: STATUS_COLOR_VALUE[gitStatus] }}>{gitStatus}</span>}
+      {!gitStatus && entry.ignored && <CircleSlash aria-label="Ignored by .gitignore" size={12} className="mr-2 ml-auto shrink-0" style={{ color: "var(--git-decoration-ignored)" }} />}
+    </button>
   );
 }

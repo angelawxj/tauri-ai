@@ -11,7 +11,7 @@ import { isRenderableName } from "./artifact-kind";
 import type { Artifact } from "./types";
 
 interface DetailPanelProps {
-  onOpenDiff?: (path: string, staged: boolean) => void;
+  onOpenDiff?: (path: string, staged: boolean, commitHash?: string) => void;
   onOpenFile?: (path: string) => void;
   /** HTML/Markdown artifacts from the chat; opens/loads them in the 浏览器 tab. */
   browserArtifact?: Artifact | null;
@@ -25,6 +25,7 @@ interface DetailPanelProps {
   projectKey?: string;
   /** 当前项目名，展示在资源管理器头部（对齐 Orca 的 FileExplorerToolbar 显示 repoName 的方式）。 */
   projectName?: string;
+  projectPath?: string;
 }
 
 const WIDTH_STORAGE_KEY = "detailPanelWidth";
@@ -38,7 +39,7 @@ function readStoredWidth(): number {
   return Math.min(Math.max(raw, MIN_WIDTH), MAX_WIDTH);
 }
 
-export default function DetailPanel({ onOpenDiff, onOpenFile, browserArtifact, artifacts, onOpenTextArtifact, onPopOutBrowser, projectKey, projectName }: DetailPanelProps) {
+export default function DetailPanel({ onOpenDiff, onOpenFile, browserArtifact, artifacts, onOpenTextArtifact, onPopOutBrowser, projectKey, projectName, projectPath }: DetailPanelProps) {
   const { t } = useI18n();
   const [activeId, setActiveId] = useState("explorer");
   const [width, setWidth] = useState(readStoredWidth);
@@ -121,7 +122,7 @@ export default function DetailPanel({ onOpenDiff, onOpenFile, browserArtifact, a
       <div className="flex h-full min-w-0 flex-1 flex-col border-l border-vscode-border bg-vscode-panel">
         <TabBar tabs={TABS} activeId={activeId} onChange={setActiveId} />
         <div className="min-h-0 flex-1">
-          {activeId === "explorer" && <Explorer key={projectKey} projectName={projectName} onOpenFile={handleExplorerOpenFile} />}
+          {activeId === "explorer" && <Explorer key={projectKey} projectName={projectName} projectPath={projectPath} onOpenFile={handleExplorerOpenFile} />}
           {activeId === "source-control" && <SourceControl key={projectKey} onOpenDiff={onOpenDiff} />}
           {activeId === "browser" && <Browser source={browserSource} onPopOut={onPopOutBrowser} />}
           {activeId === "artifacts" && <ArtifactList artifacts={artifacts} onOpen={handleOpenArtifact} />}

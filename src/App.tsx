@@ -100,7 +100,7 @@ export default function App() {
         onCloseBrowser={() => setOpenBrowserTab(null)}
       />
       <DetailPanel
-        onOpenDiff={(path, staged) => setOpenDiff({ path, staged })}
+        onOpenDiff={(path, staged, commitHash) => setOpenDiff({ path, staged, commitHash })}
         onOpenFile={(path) => setOpenFile({ path })}
         browserArtifact={browserArtifact}
         artifacts={artifacts}
@@ -108,6 +108,7 @@ export default function App() {
         onPopOutBrowser={setOpenBrowserTab}
         projectKey={activeProject?.id}
         projectName={activeProject?.name}
+        projectPath={activeProject?.path}
       />
     </div>
   );
