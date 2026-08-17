@@ -643,13 +643,13 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
             <>
               <div className="fixed inset-0 z-[90]" onClick={() => setMoreMenuOpen(false)} />
               <div className="absolute right-0 top-full z-[100] mt-1 w-56 rounded-md border border-vscode-border-light bg-vscode-bg py-1 shadow-xl">
-                <button type="button" onClick={() => setShowDotfiles((v) => !v)} className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
-                  {t.explorer.showDotfiles}
-                  <span className={showDotfiles ? "text-vscode-fg" : "text-vscode-fg-dim"}>{showDotfiles ? "✓" : ""}</span>
+                <button type="button" onClick={() => setShowDotfiles((v) => !v)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
+                  <span className={`w-3 shrink-0 text-center ${showDotfiles ? "text-vscode-fg" : "text-transparent"}`}>✓</span>
+                  <span>{t.explorer.showDotfiles}</span>
                 </button>
-                <button type="button" onClick={() => setShowGitIgnored((v) => !v)} className="flex w-full items-center justify-between px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
-                  {t.explorer.showGitIgnoredFiles}
-                  <span className={showGitIgnored ? "text-vscode-fg" : "text-vscode-fg-dim"}>{showGitIgnored ? "✓" : ""}</span>
+                <button type="button" onClick={() => setShowGitIgnored((v) => !v)} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
+                  <span className={`w-3 shrink-0 text-center ${showGitIgnored ? "text-vscode-fg" : "text-transparent"}`}>✓</span>
+                  <span>{t.explorer.showGitIgnoredFiles}</span>
                 </button>
                 <div className="my-1 border-t border-vscode-border" />
                 <button type="button" onClick={() => { setMoreMenuOpen(false); void api.openCurrentProjectInVsCode().catch((err) => setActionError(err instanceof Error ? err.message : t.explorer.actionFailed)); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
