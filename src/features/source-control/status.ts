@@ -18,3 +18,12 @@ export const STATUS_COLOR_CLASS: Record<FileStatus, string> = {
   U: "text-git-untracked",
   C: "text-git-conflict",
 };
+
+export const STATUS_COLOR_VALUE: Record<FileStatus, string> = {
+  M: "var(--git-decoration-modified)",
+  A: "var(--git-decoration-added)",
+  D: "var(--git-decoration-deleted)",
+  R: "var(--git-decoration-renamed)",
+  U: "var(--git-decoration-untracked)",
+  C: "var(--git-decoration-conflict)",
+};
