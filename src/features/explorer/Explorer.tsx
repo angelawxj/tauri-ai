@@ -656,7 +656,7 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
                   <img src="https://www.google.com/s2/favicons?domain=code.visualstudio.com&sz=64" width={14} height={14} alt="" aria-hidden className="shrink-0 rounded-[2px]" /> <span>{t.explorer.openInVsCode}</span>
                 </button>
                 <button type="button" onClick={() => { setMoreMenuOpen(false); void api.openCurrentProject().catch((err) => setActionError(err instanceof Error ? err.message : t.explorer.actionFailed)); }} className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-vscode-fg hover:bg-vscode-list-hover">
-                  <FolderOpen size={14} /> <span>{t.explorer.openInFileManager}</span>
+                  <FolderOpen size={14} className="shrink-0 text-vscode-fg-muted" /> <span>{t.explorer.openInFileManager}</span>
                 </button>
               </div>
             </>
