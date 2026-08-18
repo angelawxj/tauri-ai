@@ -2,6 +2,7 @@
 
 mod explorer;
 mod source_control;
+mod browser;
 
 fn main() {
     tauri::Builder::default()
@@ -10,6 +11,9 @@ fn main() {
         .manage(source_control::git::RepoState::new())
         .manage(explorer::fs::ExplorerState::new())
         .invoke_handler(tauri::generate_handler![
+            browser::browser_eval,
+            browser::browser_navigate,
+            browser::browser_capture_screenshot,
             explorer::fs::explorer_set_current_project,
             explorer::fs::explorer_list_dir,
             explorer::fs::explorer_read_file,

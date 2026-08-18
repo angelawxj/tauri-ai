@@ -8,15 +8,21 @@ edition = "2021"
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = [] }
+tauri = { version = "2", features = ["unstable"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 git2 = "0.19"
 trash = "5"
 notify = "6"
 glob = "0.3"
 regex = "1"
+url = "2"
+
+[target.'cfg(windows)'.dependencies]
+webview2-com = "0.38.2"
+windows = { version = "0.61.3", features = ["Win32_System_Com"] }
 
 [profile.release]
 panic = "abort"
