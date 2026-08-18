@@ -112,6 +112,7 @@ function addIncomingBoundary(rows: GraphRow[], remoteRef?: GitHistoryContext["re
 /** Port of Orca's input/output swimlane algorithm, including upstream boundary rows. */
 export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryContext): GraphRow[] {
   const rows: GraphRow[] = [];
+  const commitsByHash = new Map(commits.map((commit) => [commit.hash, commit]));
   let laneSequence = -1;
   const baseCommitHash = resolveBaseCommitHash(commits, context);
   for (const commit of commits) {
@@ -128,7 +129,7 @@ export function computeSwimlanes(commits: CommitInfo[], context?: GitHistoryCont
       }
     }
     for (let index = firstParentAdded ? 1 : 0; index < commit.parents.length; index += 1) {
-      const parent = commits.find((candidate) => candidate.hash === commit.parents[index]);
+      const parent = commitsByHash.get(commit.parents[index]);
       let colorIndex = index === 0 ? commitColor(commit, context, baseCommitHash) : parent ? commitColor(parent, context, baseCommitHash) : undefined;
       if (colorIndex === undefined) { laneSequence = (laneSequence + 1) % (GRAPH_LANE_COLORS.length - FIRST_LANE_COLOR); colorIndex = FIRST_LANE_COLOR + laneSequence; }
       outputSwimlanes.push({ id: commit.parents[index]!, colorIndex });

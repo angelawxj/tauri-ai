@@ -1,4 +1,4 @@
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import type { KeyboardEvent as ReactKeyboardEvent, PointerEvent as ReactPointerEvent } from "react";
 import { IconChevronDown, IconChevronRight, IconRefresh } from "./icons";
 import { computeSwimlanes } from "./commit-graph";
@@ -29,7 +29,7 @@ export default function HistoryPanel({ refreshSignal, onOpenCommitFile }: Histor
   const [height, setHeight] = useState(DEFAULT_HEIGHT);
   const dragState = useRef<{ startY: number; startHeight: number } | null>(null);
 
-  const graphRows = computeSwimlanes(commits, context);
+  const graphRows = useMemo(() => computeSwimlanes(commits, context), [commits, context]);
   const laneCount = Math.max(1, ...graphRows.map((r) => r.laneCount));
   const fallbackBaseRefName = commits
     .find((commit) => commit.refs.some((ref) => ref === "dev" || ref === "main"))
