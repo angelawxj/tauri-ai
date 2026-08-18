@@ -43,3 +43,8 @@ export async function setNativeSurfaceVisible(surface: BrowserSurface, visible: 
   const view = await Webview.getByLabel(surface.label);
   if (view) await (visible ? view.show() : view.hide());
 }
+
+export async function showSurfaceCopied(surface: BrowserSurface, x: number, y: number): Promise<void> {
+  const script = `(()=>{document.querySelector('[data-tauri-ai-copied]')?.remove();const n=document.createElement('div');n.dataset.tauriAiCopied='';n.innerHTML='<span style="display:grid;place-items:center;width:18px;height:18px;border-radius:50%;background:#1683df;color:white;font-size:12px">✓</span><strong>已复制</strong>';Object.assign(n.style,{position:'fixed',zIndex:'2147483647',left:Math.max(12,Math.min(innerWidth-116,${Math.round(x)}-48))+'px',top:Math.max(12,Math.min(innerHeight-54,${Math.round(y)}+14))+'px',display:'flex',alignItems:'center',gap:'9px',padding:'12px 18px',borderRadius:'24px',background:'rgba(255,255,255,.96)',color:'#202124',font:'15px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif',boxShadow:'0 5px 20px rgba(0,0,0,.16)',border:'1px solid rgba(0,0,0,.05)',pointerEvents:'none'});document.documentElement.appendChild(n);setTimeout(()=>n.remove(),1500);return true})()`;
+  await evaluateSurface(surface, script);
+}

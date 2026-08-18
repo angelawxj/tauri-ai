@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, Code2, Copy, Crosshair, X } from "lucide-react";
 import { armSurfacePicker, copyText, formatCapture } from "./browser-element-capture";
-import { setNativeSurfaceVisible } from "./browser-surface";
+import { setNativeSurfaceVisible, showSurfaceCopied } from "./browser-surface";
 import type { BrowserElementCapture, BrowserToolProps } from "./types";
+
+// Keep the review implementation available for later, while matching Orca's immediate-copy flow.
+const SHOW_GRAB_REVIEW = false;
 
 export default function GrabPageElement({ surfaceRef, disabled }: BrowserToolProps) {
   const [active, setActive] = useState(false);
@@ -19,7 +22,12 @@ export default function GrabPageElement({ surfaceRef, disabled }: BrowserToolPro
     cleanupRef.current = armSurfacePicker(surface, (value) => {
       setActive(false);
       setCapture(value);
-      void setNativeSurfaceVisible(surface, false);
+      void copyText(formatCapture(value)).then(() => {
+        setCopied(true);
+        const rect = value.target.rectViewport;
+        return showSurfaceCopied(surface, rect.x + rect.width / 2, rect.y + rect.height);
+      }).finally(() => window.setTimeout(() => setCopied(false), 1500));
+      if (SHOW_GRAB_REVIEW) void setNativeSurfaceVisible(surface, false);
     });
   };
   const doCopy = async () => {
@@ -31,7 +39,7 @@ export default function GrabPageElement({ surfaceRef, disabled }: BrowserToolPro
 
   return <>
     <button type="button" onClick={start} disabled={disabled} aria-pressed={active} title="抓取页面元素" className={`browser-tool-button ${active ? "browser-tool-button-active" : ""}`}><Crosshair size={16} /></button>
-    {capture && <div className="browser-tool-sheet" role="dialog" aria-label="抓取结果">
+    {SHOW_GRAB_REVIEW && capture && <div className="browser-tool-sheet" role="dialog" aria-label="抓取结果">
       <div className="browser-tool-sheet-header"><span className="browser-tool-badge">Grab</span><span>检查抓取的页面上下文</span><button onClick={() => { setCapture(null); if (surfaceRef.current) void setNativeSurfaceVisible(surfaceRef.current, true); }}><X size={16} /></button></div>
       <div className="browser-tool-sheet-body">
         {capture.screenshot && <img src={capture.screenshot} alt="选中元素截图" className="browser-tool-preview" />}
