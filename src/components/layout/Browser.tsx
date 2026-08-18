@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { IconCompass, IconExternalLink, IconRefresh } from "../icons";
 import { api as explorerApi, isApiUnavailable } from "../../features/explorer/api";
 import { useI18n } from "../../i18n";
 import { isHttpUrl, resolveContent, type Resolved } from "./browser-render";
 import BrowserView from "./BrowserView";
+import { AnnotatePageElement, DrawOnScreenshot, GrabPageElement } from "../browser-tools";
+import type { BrowserSurface } from "../browser-tools/browser-surface";
 
 export type BrowserSource = { kind: "path"; path: string } | { kind: "artifact"; name: string; content: string };
 
@@ -25,6 +27,8 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const surfaceRef = useRef<BrowserSurface | null>(null);
+  const handleSurface = useCallback((surface: BrowserSurface | null) => { surfaceRef.current = surface; }, []);
 
   const navigate = (target: string) => {
     const value = target.trim();
@@ -85,6 +89,11 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
         <button type="button" title={t.common.refresh} onClick={() => navigate(addressInput)} className="shrink-0 rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg">
           <IconRefresh size={13} />
         </button>
+        <span className="h-5 w-px shrink-0 bg-vscode-border-light" />
+        <GrabPageElement surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
+        <AnnotatePageElement surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
+        <DrawOnScreenshot surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
+        <span className="h-5 w-px shrink-0 bg-vscode-border-light" />
         <button
           type="button"
           title={t.browser.popOut}
@@ -103,7 +112,7 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
         {!unavailable && !loading && !error && !resolved && (
           <div className="px-3 py-2 text-[12px] text-vscode-fg-dim">{t.browser.empty}</div>
         )}
-        {!unavailable && !loading && !error && resolved && <BrowserView resolved={resolved} />}
+        {!unavailable && !loading && !error && resolved && <BrowserView resolved={resolved} onSurface={handleSurface} />}
       </div>
     </div>
   );

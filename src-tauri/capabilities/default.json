@@ -3,5 +3,16 @@
   "identifier": "default",
   "description": "Default permissions for the main window",
   "windows": ["main"],
-  "permissions": ["core:default", "dialog:default", "opener:default", "opener:allow-reveal-item-in-dir"]
+  "permissions": [
+    "core:default",
+    "core:webview:allow-create-webview",
+    "core:webview:allow-set-webview-position",
+    "core:webview:allow-set-webview-size",
+    "core:webview:allow-webview-show",
+    "core:webview:allow-webview-hide",
+    "core:webview:allow-webview-close",
+    "dialog:default",
+    "opener:default",
+    "opener:allow-reveal-item-in-dir"
+  ]
 }

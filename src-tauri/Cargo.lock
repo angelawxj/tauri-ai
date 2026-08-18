@@ -3628,11 +3628,15 @@ dependencies = [
  "notify",
  "regex",
  "serde",
+ "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
  "trash",
+ "url",
+ "webview2-com",
+ "windows 0.61.3",
 ]
 
 [[package]]
