@@ -28,6 +28,7 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
   const [error, setError] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
   const surfaceRef = useRef<BrowserSurface | null>(null);
+  const surfaceHostRef = useRef<HTMLDivElement>(null);
   const handleSurface = useCallback((surface: BrowserSurface | null) => { surfaceRef.current = surface; }, []);
 
   const navigate = (target: string) => {
@@ -74,7 +75,7 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
   const canPopOut = !unavailable && !loading && !error && Boolean(resolved);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
+    <div className="relative flex h-full flex-col overflow-hidden bg-vscode-bg">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-vscode-border px-3">
         <IconCompass size={14} className="shrink-0 text-vscode-fg-muted" />
         <input
@@ -90,8 +91,8 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
           <IconRefresh size={13} />
         </button>
         <span className="h-5 w-px shrink-0 bg-vscode-border-light" />
-        <GrabPageElement surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
-        <AnnotatePageElement surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
+        <GrabPageElement surfaceRef={surfaceRef} getSurfaceBounds={() => surfaceHostRef.current?.getBoundingClientRect() ?? null} disabled={!resolved || resolved.mode === "text"} />
+        <AnnotatePageElement surfaceRef={surfaceRef} getSurfaceBounds={() => surfaceHostRef.current?.getBoundingClientRect() ?? null} disabled={!resolved || resolved.mode === "text"} />
         <DrawOnScreenshot surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
         <span className="h-5 w-px shrink-0 bg-vscode-border-light" />
         <button
@@ -105,7 +106,7 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
         </button>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-hidden">
+      <div ref={surfaceHostRef} className="min-h-0 flex-1 overflow-hidden">
         {unavailable && <div className="px-3 py-3 text-[12px] leading-relaxed text-vscode-fg-dim">{t.browser.notConnected}</div>}
         {!unavailable && loading && <div className="px-3 py-2 text-[12px] text-vscode-fg-dim">{t.browser.loading}</div>}
         {!unavailable && !loading && error && <div className="px-3 py-2 text-[12px] text-red-400">{error}</div>}

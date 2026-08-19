@@ -1,22 +1,23 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, MessageSquarePlus, Send, Trash2, X } from "lucide-react";
+import { Check, CircleHelp, MessageSquarePlus, PencilLine, Send, Trash2, X } from "lucide-react";
 import { armSurfacePicker, copyText, formatCapture, getFrameDocument } from "./browser-element-capture";
 import { evaluateSurface, setNativeSurfaceVisible } from "./browser-surface";
 import type { BrowserAnnotation, BrowserElementCapture, BrowserToolProps } from "./types";
 
-const INTENTS = [{ id: "fix", label: "修复" }, { id: "change", label: "修改" }, { id: "question", label: "提问" }, { id: "approve", label: "认可" }] as const;
+const INTENTS = [{ id: "change", label: "改变", icon: PencilLine }, { id: "question", label: "疑问", icon: CircleHelp }] as const;
 
 function annotationMarkdown(items: BrowserAnnotation[]): string {
   return items.map((item) => `## 页面注释 ${item.index}: ${item.intent}\n\n${item.comment}\n\n${formatCapture(item.capture)}`).join("\n\n---\n\n");
 }
 
-export default function AnnotatePageElement({ surfaceRef, disabled }: BrowserToolProps) {
+export default function AnnotatePageElement({ surfaceRef, disabled, getSurfaceBounds }: BrowserToolProps) {
   const [active, setActive] = useState(false);
   const [pending, setPending] = useState<BrowserElementCapture | null>(null);
   const [comment, setComment] = useState("");
   const [intent, setIntent] = useState<BrowserAnnotation["intent"]>("change");
   const [items, setItems] = useState<BrowserAnnotation[]>([]);
   const [copied, setCopied] = useState(false);
+  const [anchor, setAnchor] = useState<{ x: number; y: number; below: boolean } | null>(null);
   const cleanupRef = useRef<(() => void) | null>(null);
   useEffect(() => () => cleanupRef.current?.(), []);
 
@@ -28,6 +29,11 @@ export default function AnnotatePageElement({ surfaceRef, disabled }: BrowserToo
     cleanupRef.current = armSurfacePicker(surface, (value) => {
       setActive(false);
       setPending(value);
+      const rect = value.target.rectViewport, bounds = getSurfaceBounds?.();
+      const x = (bounds?.left ?? 0) + rect.x + rect.width / 2;
+      const bottom = (bounds?.top ?? 0) + rect.y + rect.height;
+      const top = (bounds?.top ?? 0) + rect.y;
+      setAnchor({ x, y: bottom + 10 < (bounds?.bottom ?? window.innerHeight) ? bottom : top, below: bottom + 10 < (bounds?.bottom ?? window.innerHeight) });
       void setNativeSurfaceVisible(surface, false);
     });
   };
@@ -60,12 +66,12 @@ export default function AnnotatePageElement({ surfaceRef, disabled }: BrowserToo
 
   return <>
     <button type="button" onClick={start} disabled={disabled} aria-pressed={active} title="注释页面元素" className={`browser-tool-button ${active ? "browser-tool-button-active" : ""}`}><MessageSquarePlus size={15} />{items.length > 0 && <span className="browser-tool-count">{items.length}</span>}</button>
-    {pending && <div className="browser-annotation-dialog" role="dialog" aria-label="添加页面注释">
-      <div className="browser-annotation-title"><span><span className="browser-tool-badge">{items.length + 1}</span> 添加页面注释</span><button onClick={() => { setPending(null); if (surfaceRef.current) void setNativeSurfaceVisible(surfaceRef.current, true); }}><X size={15} /></button></div>
-      <div className="browser-annotation-target"><strong>&lt;{pending.target.tagName}&gt;</strong><code>{pending.target.selector}</code></div>
-      <textarea autoFocus value={comment} onChange={(event) => setComment(event.target.value)} placeholder="描述希望修改、修复或确认的内容…" maxLength={2000} />
-      <div className="browser-annotation-intents">{INTENTS.map((option) => <button key={option.id} className={intent === option.id ? "active" : ""} onClick={() => setIntent(option.id)}>{option.label}</button>)}</div>
-      <div className="browser-annotation-actions"><button onClick={() => { setPending(null); if (surfaceRef.current) void setNativeSurfaceVisible(surfaceRef.current, true); }}>取消</button><button className="browser-tool-primary" disabled={!comment.trim()} onClick={add}><MessageSquarePlus size={14} />添加注释</button></div>
+    {pending && <div className="browser-annotation-dialog" style={anchor ? { left: anchor.x, top: anchor.y, transform: anchor.below ? "translate(-50%, 10px)" : "translate(-50%, calc(-100% - 10px))" } : undefined} role="dialog" aria-label="添加页面注释">
+      <div className="browser-annotation-target"><strong>{pending.target.accessibleName || pending.target.text || pending.target.tagName}</strong><code>{pending.target.selector}</code></div>
+      <textarea autoFocus value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); setPending(null); if (surfaceRef.current) void setNativeSurfaceVisible(surfaceRef.current, true); } else if ((event.ctrlKey || event.metaKey) && event.key === "Enter" && comment.trim()) { event.preventDefault(); add(); } }} placeholder="描述智能体应该在这里改变什么……" maxLength={2000} />
+      <div className="browser-annotation-intent-label">意图</div>
+      <div className="browser-annotation-intents">{INTENTS.map((option) => { const Icon = option.icon; return <button key={option.id} className={intent === option.id ? "active" : ""} onClick={() => setIntent(option.id)}><Icon size={18} />{option.label}</button>; })}</div>
+      <div className="browser-annotation-actions"><button onClick={() => { setPending(null); if (surfaceRef.current) void setNativeSurfaceVisible(surfaceRef.current, true); }}>取消</button><button className="browser-tool-primary" disabled={!comment.trim()} onClick={add}><MessageSquarePlus size={18} />添加 <kbd>Ctrl ↵</kbd></button></div>
     </div>}
     {items.length > 0 && surfaceRef.current?.kind !== "native" && <div className="browser-annotation-tray">
       <div className="browser-annotation-tray-header"><strong>{items.length} 条页面注释</strong><span><button title="复制全部" onClick={() => void copyAll()}>{copied ? <Check size={14} /> : <Send size={14} />}</button><button title="清空" onClick={clear}><Trash2 size={14} /></button></span></div>

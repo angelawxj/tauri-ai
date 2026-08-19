@@ -32,6 +32,8 @@ import type { BrowserSurface } from "./browser-surface";
 export type BrowserToolProps = {
   surfaceRef: React.RefObject<BrowserSurface | null>;
   disabled?: boolean;
+  /** WebView 不是 DOM 节点；用于让宿主提示层按页面元素位置显示。 */
+  getSurfaceBounds?: () => DOMRect | null;
 };
 
 export type BrowserAnnotation = {
