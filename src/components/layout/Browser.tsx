@@ -74,7 +74,7 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
   const canPopOut = !unavailable && !loading && !error && Boolean(resolved);
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-vscode-bg">
+    <div className="relative flex h-full flex-col overflow-hidden bg-vscode-bg">
       <div className="flex h-9 shrink-0 items-center gap-2 border-b border-vscode-border px-3">
         <IconCompass size={14} className="shrink-0 text-vscode-fg-muted" />
         <input

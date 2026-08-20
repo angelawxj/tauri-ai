@@ -170,13 +170,40 @@ export function armSurfacePicker(surface: BrowserSurface, onSelect: (capture: Br
   void evaluateSurface(surface, NATIVE_PICKER_SCRIPT).then(async () => {
     while (!cancelled) {
       await new Promise((resolve) => window.setTimeout(resolve, 120));
-      const value = await evaluateSurface<BrowserElementCapture | { cancelled: true } | null>(surface, "window.__tauriAiPickedElement || null");
+      let value: BrowserElementCapture | { cancelled: true } | null;
+      try {
+        value = await evaluateSurface(surface, "window.__tauriAiPickedElement || null");
+      } catch {
+        // Navigation/unmount can remove the native webview while the picker polls.
+        break;
+      }
       if (value) { if (!("cancelled" in value)) onSelect(value); break; }
     }
-  });
-  return () => { cancelled = true; void evaluateSurface(surface, "document.querySelector('[data-tauri-ai-picker]')?.remove();window.__tauriAiPickedElement={cancelled:true}"); };
+  }).catch(() => {});
+  return () => { cancelled = true; void evaluateSurface(surface, "document.querySelector('[data-tauri-ai-picker]')?.remove();window.__tauriAiPickedElement={cancelled:true}").catch(() => {}); };
 }
 
 export async function copyText(text: string): Promise<void> {
-  await navigator.clipboard.writeText(text);
+  try {
+    if (document.hasFocus()) {
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+    if ("__TAURI_INTERNALS__" in window) {
+      const { getCurrentWindow } = await import("@tauri-apps/api/window");
+      await getCurrentWindow().setFocus();
+      await navigator.clipboard.writeText(text);
+      return;
+    }
+  } catch {
+    // Fall through to the synchronous compatibility path below.
+  }
+  const input = document.createElement("textarea");
+  input.value = text;
+  input.setAttribute("readonly", "");
+  Object.assign(input.style, { position: "fixed", left: "-9999px", top: "0", opacity: "0" });
+  document.body.appendChild(input);
+  input.select();
+  document.execCommand("copy");
+  input.remove();
 }

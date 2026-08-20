@@ -152,3 +152,44 @@ textarea {
 .browser-annotation-tray { position:absolute; z-index:35; right:10px; bottom:10px; width:min(330px,calc(100% - 20px)); max-height:42%; overflow:auto; border:1px solid var(--color-vscode-border-light); border-radius:8px; color:var(--color-vscode-fg); background:var(--color-vscode-panel); box-shadow:0 8px 24px rgba(0,0,0,.28); }.browser-annotation-tray-header { position:sticky; top:0; display:flex; align-items:center; justify-content:space-between; padding:7px 9px; border-bottom:1px solid var(--color-vscode-border); background:var(--color-vscode-panel); font-size:11px; }.browser-annotation-item { display:grid; grid-template-columns:23px 1fr 24px; gap:7px; align-items:start; padding:8px 9px; border-bottom:1px solid var(--color-vscode-border); }.browser-annotation-item>span { display:grid; place-items:center; width:22px; height:22px; border-radius:50%; color:white; background:#6366f1; font-size:10px; font-weight:700; }.browser-annotation-item strong { font-size:10px; }.browser-annotation-item p { margin:3px 0 0; color:var(--color-vscode-fg-muted); font-size:11px; }
 .browser-markup-overlay { position:absolute; inset:0; z-index:60; overflow:hidden; background:#111; }.browser-markup-overlay>img,.browser-markup-overlay>canvas { position:absolute; inset:0; width:100%; height:100%; }.browser-markup-overlay>img { pointer-events:none; user-select:none; }.browser-markup-overlay>canvas { cursor:crosshair; touch-action:none; }.browser-markup-toolbar { position:absolute; left:50%; bottom:55px; display:flex; align-items:center; gap:2px; max-width:calc(100% - 16px); padding:5px; border:1px solid var(--color-vscode-border-light); border-radius:7px; background:color-mix(in srgb,var(--color-vscode-panel) 96%,transparent); box-shadow:0 5px 18px rgba(0,0,0,.3); transform:translateX(-50%); }.browser-markup-toolbar>button { display:grid; place-items:center; width:28px; height:28px; padding:0; border:0; border-radius:4px; color:var(--color-vscode-fg-muted); background:transparent; }.browser-markup-toolbar>button:hover,.browser-markup-toolbar>button.active { color:var(--color-vscode-fg); background:var(--color-vscode-list-hover); }.browser-markup-toolbar>button.active { color:white; background:#4f46e5; }.browser-markup-toolbar>button:disabled { opacity:.3; }.browser-markup-toolbar>i { width:1px; height:20px; margin:0 3px; background:var(--color-vscode-border-light); }.browser-color-row { display:flex; gap:3px; padding:0 2px; }.browser-color-row button { width:18px; height:18px; padding:0; border:2px solid transparent; border-radius:50%; box-shadow:0 0 0 1px rgba(128,128,128,.45); }.browser-color-row button.active { border-color:white; box-shadow:0 0 0 2px #6366f1; }.browser-width-dot { display:block; border-radius:50%; background:currentColor; }.browser-markup-actions { position:absolute; left:50%; bottom:10px; display:flex; align-items:center; gap:6px; max-width:calc(100% - 16px); padding:5px; border:1px solid var(--color-vscode-border-light); border-radius:7px; background:color-mix(in srgb,var(--color-vscode-panel) 96%,transparent); box-shadow:0 5px 18px rgba(0,0,0,.3); transform:translateX(-50%); white-space:nowrap; }.browser-markup-actions span { padding:0 5px; color:var(--color-vscode-fg-muted); font-size:10px; }
 @media (max-width:520px) { .browser-markup-toolbar { overflow-x:auto; justify-content:flex-start; }.browser-color-row { display:none; }.browser-markup-actions span { display:none; } }
+
+/* Orca-style browser review surfaces. These controls intentionally stay light over any page. */
+.browser-annotation-dialog { top:80px; right:auto; left:50%; width:min(528px,calc(100% - 28px)); padding:16px 16px 18px; border:1px solid #d9d9d9; border-radius:13px; color:#202124; background:#fff; box-shadow:0 16px 42px rgba(0,0,0,.16); transform:translateX(-50%); }
+.browser-annotation-title { min-height:25px; font-size:17px; }
+.browser-annotation-title>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.browser-annotation-title button { width:28px; min-height:28px; padding:0; color:#777; }
+.browser-annotation-selector { display:block; overflow:hidden; margin:0 0 12px; color:#777; font:600 15px/20px var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
+.browser-annotation-dialog textarea { box-sizing:border-box; min-height:150px; resize:none; padding:14px 16px; border:3px solid #aaa; border-radius:16px; color:#202124; background:#fff; font-size:19px; line-height:1.45; }
+.browser-annotation-dialog textarea::placeholder { color:#858585; opacity:1; }
+.browser-annotation-dialog textarea:focus { border-color:#969696; box-shadow:0 0 0 1px #ddd; }
+.browser-annotation-intent-label { display:block; margin:18px 2px 6px; color:#777; font-size:16px; }
+.browser-annotation-intents { gap:0; margin:0; overflow:hidden; border:1px solid #ddd; border-radius:14px; background:#fafafa; }
+.browser-annotation-intents button { min-height:48px; border:0; border-right:1px solid #c7c7c7; border-radius:0; color:#191919; font-size:17px; }
+.browser-annotation-intents button:last-child { border-right:0; }
+.browser-annotation-intents button:hover { background:#f1f1f1; }
+.browser-annotation-intents .active { color:#191919; border-color:#c7c7c7; background:#e7e7e7; box-shadow:inset 0 0 0 1px #d0d0d0; }
+.browser-annotation-actions { gap:12px; margin-top:17px; }
+.browser-annotation-actions button { min-height:48px; padding:0 16px; color:#202124; border-radius:13px; font-size:18px; }
+.browser-annotation-actions .browser-tool-primary { min-width:186px; background:#8d8d8d!important; }
+.browser-annotation-actions .browser-tool-primary:not(:disabled) { background:#202020!important; }
+.browser-annotation-actions kbd { margin-left:4px; padding:3px 7px; border:1px solid rgba(255,255,255,.28); border-radius:5px; color:#f3f3f3; background:rgba(255,255,255,.08); font:600 13px var(--font-mono); }
+.browser-annotation-backdrop { position:absolute; z-index:47; top:36px; right:0; bottom:0; left:0; width:100%; height:calc(100% - 36px); object-fit:fill; background:#fff; user-select:none; }
+.browser-annotation-dialog.browser-annotation-positioned { right:auto; transform:none; }
+
+.browser-markup-overlay { top:36px; background:#fff; }
+.browser-markup-overlay>img { object-fit:fill; }
+.browser-markup-toolbar { bottom:96px; gap:3px; padding:7px 9px; border:1px solid #ddd; border-radius:13px; color:#111; background:#fff; box-shadow:0 5px 18px rgba(0,0,0,.18); }
+.browser-markup-tool-wrap { position:relative; display:block; }
+.browser-markup-tool-wrap>button,.browser-markup-toolbar>button { display:grid; place-items:center; width:38px; height:38px; padding:0; border:0; border-radius:10px; color:#101010; background:transparent; }
+.browser-markup-tool-wrap>button:hover,.browser-markup-toolbar>button:hover { background:#eee; }
+.browser-markup-tool-wrap>button.active { color:#fff; background:#1e1e1e; }
+.browser-markup-tool-wrap .browser-markup-popover { position:absolute; top:35px; left:15px; z-index:2; display:grid; width:50px; height:50px; border:1px solid #ddd; border-radius:12px; color:#111; background:#fff; box-shadow:0 5px 16px rgba(0,0,0,.18); }
+.browser-markup-toolbar>i { height:28px; margin:0 6px; background:#e4e4e4; }
+.browser-markup-toolbar .browser-current-color { width:23px; height:23px; margin:0 7px; border-radius:50%; box-shadow:none; }
+.browser-markup-toolbar .browser-text-size { display:flex; width:58px; gap:5px; font-size:14px; }
+.browser-markup-toolbar .browser-text-size b { font-size:14px; }
+.browser-markup-actions { bottom:16px; width:min(730px,calc(100% - 28px)); justify-content:flex-end; gap:10px; box-sizing:border-box; padding:8px 9px 8px 14px; border:1px solid #ddd; border-radius:14px; color:#202124; background:#fff; box-shadow:0 5px 18px rgba(0,0,0,.17); }
+.browser-markup-actions span { flex:1; overflow:hidden; padding:0; color:#858585; font-size:14px; text-overflow:ellipsis; }
+.browser-markup-actions button { min-height:42px; padding:0 13px; border-radius:10px; color:#202124; font-size:16px; }
+.browser-markup-actions .browser-tool-primary { min-width:148px; background:#1f1f1f!important; }
+@media (max-width:700px) { .browser-annotation-dialog { top:48px; }.browser-markup-toolbar { overflow-x:auto; justify-content:flex-start; }.browser-markup-actions span { display:none; } }

@@ -10,11 +10,14 @@ interface BrowserViewProps {
 
 function NativeBrowserFrame({ url, onSurface }: { url: string; onSurface?: (surface: BrowserSurface | null) => void }) {
   const hostRef = useRef<HTMLDivElement>(null);
-  const labelRef = useRef(`browser-page-${crypto.randomUUID()}`);
 
   useEffect(() => {
     const host = hostRef.current;
     if (!host || !("__TAURI_INTERNALS__" in window)) return;
+    // The effect is intentionally given a fresh label on every run. React StrictMode
+    // mounts, cleans up and mounts effects again before the first async creation has
+    // necessarily completed; reusing a ref label makes those creations collide.
+    const label = `browser-page-${crypto.randomUUID()}`;
     let disposed = false;
     let view: import("@tauri-apps/api/webview").Webview | null = null;
     let observer: ResizeObserver | null = null;
@@ -23,15 +26,15 @@ function NativeBrowserFrame({ url, onSurface }: { url: string; onSurface?: (surf
         import("@tauri-apps/api/webview"), import("@tauri-apps/api/window"), import("@tauri-apps/api/dpi"),
       ]);
       const rect = host.getBoundingClientRect();
-      view = new Webview(getCurrentWindow(), labelRef.current, { url, x: rect.left, y: rect.top, width: rect.width, height: rect.height, focus: false });
+      view = new Webview(getCurrentWindow(), label, { url, x: rect.left, y: rect.top, width: rect.width, height: rect.height, focus: false });
       await new Promise<void>((resolve, reject) => { view!.once("tauri://created", () => resolve()); view!.once("tauri://error", (event) => reject(event.payload)); });
       if (disposed) { await view.close(); return; }
-      onSurface?.({ kind: "native", label: labelRef.current });
+      onSurface?.({ kind: "native", label });
       const syncBounds = () => { if (!view || !host.isConnected) return; const next = host.getBoundingClientRect(); void view.setPosition(new LogicalPosition(next.left, next.top)); void view.setSize(new LogicalSize(Math.max(1, next.width), Math.max(1, next.height))); };
       observer = new ResizeObserver(syncBounds); observer.observe(host); window.addEventListener("resize", syncBounds); syncBounds();
       host.dataset.nativeResizeListener = "active";
       (host as HTMLElement & { __syncBounds?: () => void }).__syncBounds = syncBounds;
-    })().catch((error) => { console.error("native browser creation failed", error); });
+    })().catch((error) => { if (!disposed) console.error("native browser creation failed", error); });
     return () => { disposed = true; observer?.disconnect(); const sync = (host as HTMLElement & { __syncBounds?: () => void }).__syncBounds; if (sync) window.removeEventListener("resize", sync); onSurface?.(null); void view?.close(); };
   }, [onSurface, url]);
   return <div ref={hostRef} className="h-full w-full bg-white" />;
