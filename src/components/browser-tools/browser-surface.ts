@@ -37,30 +37,6 @@ export async function captureSurface(surface: BrowserSurface): Promise<string> {
   return canvas.toDataURL("image/png");
 }
 
-/** 截取页面中被选中的区域；原生 WebView 不能把像素直接返回给页面脚本，因此在宿主侧裁剪。 */
-export async function captureSelectionScreenshot(surface: BrowserSurface, rect: { x: number; y: number; width: number; height: number }, viewport: { width: number; height: number }): Promise<string | null> {
-  if (rect.width < 1 || rect.height < 1) return null;
-  try {
-    const dataUrl = await captureSurface(surface);
-    const image = new Image();
-    image.src = dataUrl;
-    await image.decode();
-    const scaleX = image.naturalWidth / Math.max(1, viewport.width);
-    const scaleY = image.naturalHeight / Math.max(1, viewport.height);
-    const sourceX = Math.max(0, Math.floor(rect.x * scaleX));
-    const sourceY = Math.max(0, Math.floor(rect.y * scaleY));
-    const sourceWidth = Math.min(image.naturalWidth - sourceX, Math.max(1, Math.ceil(rect.width * scaleX)));
-    const sourceHeight = Math.min(image.naturalHeight - sourceY, Math.max(1, Math.ceil(rect.height * scaleY)));
-    if (sourceWidth < 1 || sourceHeight < 1) return null;
-    const canvas = document.createElement("canvas");
-    canvas.width = sourceWidth; canvas.height = sourceHeight;
-    const context = canvas.getContext("2d");
-    if (!context) return null;
-    context.drawImage(image, sourceX, sourceY, sourceWidth, sourceHeight, 0, 0, sourceWidth, sourceHeight);
-    return canvas.toDataURL("image/png");
-  } catch { return null; }
-}
-
 export async function setNativeSurfaceVisible(surface: BrowserSurface, visible: boolean): Promise<void> {
   if (surface.kind !== "native") return;
   const { Webview } = await import("@tauri-apps/api/webview");
