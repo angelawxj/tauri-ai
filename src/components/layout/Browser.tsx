@@ -5,7 +5,7 @@ import { useI18n } from "../../i18n";
 import { isHttpUrl, resolveContent, type Resolved } from "./browser-render";
 import BrowserView from "./BrowserView";
 import { AnnotatePageElement, DrawOnScreenshot, GrabPageElement } from "../browser-tools";
-import type { BrowserSurface } from "../browser-tools";
+import type { BrowserSurface } from "../browser-tools/browser-surface";
 
 export type BrowserSource = { kind: "path"; path: string } | { kind: "artifact"; name: string; content: string };
 

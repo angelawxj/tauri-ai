@@ -32,7 +32,7 @@ export function useGitHistory(refreshSignal: number): UseGitHistoryResult {
   const refresh = useCallback(async () => {
     setLoading(true);
     try {
-      const [log, historyContext] = await Promise.all([api.log(), api.historyContext()]);
+      const [log, historyContext] = await Promise.all([api.log(50), api.historyContext()]);
       setCommits(log);
       setContext(historyContext);
       setError(null);

@@ -1,6 +1,6 @@
 # Browser tools
 
-三个功能均封装为独立公共组件，统一由当前目录的 `index.ts` 导出。业务页面只负责传入浏览器表面引用，不包含任何工具实现：
+三个工具都位于当前目录，没有项目状态库或 Tauri API 依赖：
 
 - `GrabPageElement.tsx`：悬停高亮并抓取元素的 DOM、选择器、可访问性、样式、上下文和局部截图。
 - `AnnotatePageElement.tsx`：选择元素、添加意图与评论、在页面显示编号标记并导出全部注释。
@@ -8,27 +8,15 @@
 
 ## 迁移
 
-复制整个 `browser-tools` 目录和 `src/index.css` 中以 `.browser-` 开头的样式。三个组件接收同一个 `BrowserSurface` ref，可连接同源 iframe 或 Tauri 原生 WebView：
+复制整个 `browser-tools` 目录和 `src/index.css` 中以 `.browser-` 开头的样式；目标项目只需 React 18 和 `lucide-react`。三个组件接收同一个 iframe ref：
 
 ```tsx
-import {
-  AnnotatePageElement,
-  DrawOnScreenshot,
-  GrabPageElement,
-  type BrowserSurface,
-} from "./components/browser-tools"
+const iframeRef = useRef<HTMLIFrameElement>(null)
 
-const surfaceRef = useRef<BrowserSurface | null>(null)
-
-<GrabPageElement surfaceRef={surfaceRef} />
-<AnnotatePageElement surfaceRef={surfaceRef} />
-<DrawOnScreenshot surfaceRef={surfaceRef} />
-
-<iframe
-  ref={(iframe) => { surfaceRef.current = iframe ? { kind: "iframe", iframe } : null }}
-  srcDoc={html}
-  sandbox="allow-scripts allow-same-origin"
-/>
+<GrabPageElement iframeRef={iframeRef} />
+<AnnotatePageElement iframeRef={iframeRef} />
+<DrawOnScreenshot iframeRef={iframeRef} />
+<iframe ref={iframeRef} srcDoc={html} sandbox="allow-scripts allow-same-origin" />
 ```
 
-iframe 模式只需要 React 18 和 `lucide-react`；原生 WebView 模式还需要复制项目中的 Tauri 浏览器命令并安装 `@tauri-apps/api`。浏览器安全模型禁止宿主读取跨域 iframe 的 DOM，因此外部网站应使用原生 WebView 适配，不能用普通跨域 iframe 代替。
+浏览器安全模型禁止宿主读取跨域 iframe 的 DOM，因此这些工具用于 `srcDoc`、同源页面或允许注入脚本的 Electron/Tauri WebView。外部跨域页面应在宿主层提供页面脚本注入和截图桥接；本项目会明确禁用这些按钮，避免产生不完整或误导性的抓取结果。

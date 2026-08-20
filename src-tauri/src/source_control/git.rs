@@ -432,7 +432,7 @@ pub fn git_log(limit: usize, state: State<RepoState>) -> Result<Vec<CommitInfo>,
 
     let mut result = Vec::new();
     for oid_res in revwalk {
-        if limit > 0 && result.len() >= limit {
+        if result.len() >= limit {
             break;
         }
         let oid = oid_res.map_err(|e| e.to_string())?;

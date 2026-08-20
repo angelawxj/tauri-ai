@@ -36,8 +36,7 @@ export const api = {
   unstageAll: () => call<void>("git_unstage_all"),
   discard: (path: string) => call<void>("git_discard", { path }),
   commit: (message: string) => call<string>("git_commit", { message }),
-  // A limit of 0 asks the backend for the complete history reachable from HEAD.
-  log: (limit = 0) => call<CommitInfo[]>("git_log", { limit }),
+  log: (limit = 50) => call<CommitInfo[]>("git_log", { limit }),
   historyContext: () => call<GitHistoryContext>("git_history_context"),
   commitFiles: (hash: string) => call<FileEntry[]>("git_commit_files", { hash }),
   committedFiles: () => call<FileEntry[]>("git_committed_files"),
