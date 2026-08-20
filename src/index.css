@@ -154,25 +154,25 @@ textarea {
 @media (max-width:520px) { .browser-markup-toolbar { overflow-x:auto; justify-content:flex-start; }.browser-color-row { display:none; }.browser-markup-actions span { display:none; } }
 
 /* Orca-style browser review surfaces. These controls intentionally stay light over any page. */
-.browser-annotation-dialog { top:80px; right:auto; left:50%; width:min(528px,calc(100% - 28px)); padding:16px 16px 18px; border:1px solid #d9d9d9; border-radius:13px; color:#202124; background:#fff; box-shadow:0 16px 42px rgba(0,0,0,.16); transform:translateX(-50%); }
-.browser-annotation-title { min-height:25px; font-size:17px; }
+.browser-annotation-dialog { top:80px; right:auto; left:50%; width:min(420px,calc(100% - 28px)); padding:12px 12px 13px; border:1px solid #d9d9d9; border-radius:11px; color:#202124; background:#fff; box-shadow:0 12px 34px rgba(0,0,0,.16); transform:translateX(-50%); }
+.browser-annotation-title { min-height:21px; font-size:14px; }
 .browser-annotation-title>span { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.browser-annotation-title button { width:28px; min-height:28px; padding:0; color:#777; }
-.browser-annotation-selector { display:block; overflow:hidden; margin:0 0 12px; color:#777; font:600 15px/20px var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
-.browser-annotation-dialog textarea { box-sizing:border-box; min-height:150px; resize:none; padding:14px 16px; border:3px solid #aaa; border-radius:16px; color:#202124; background:#fff; font-size:19px; line-height:1.45; }
+.browser-annotation-title button { width:24px; min-height:24px; padding:0; color:#777; }
+.browser-annotation-selector { display:block; overflow:hidden; margin:0 0 9px; color:#777; font:600 12px/17px var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
+.browser-annotation-dialog textarea { box-sizing:border-box; min-height:105px; resize:none; padding:10px 12px; border:2px solid #aaa; border-radius:12px; color:#202124; background:#fff; font-size:14px; line-height:1.4; }
 .browser-annotation-dialog textarea::placeholder { color:#858585; opacity:1; }
 .browser-annotation-dialog textarea:focus { border-color:#969696; box-shadow:0 0 0 1px #ddd; }
-.browser-annotation-intent-label { display:block; margin:18px 2px 6px; color:#777; font-size:16px; }
-.browser-annotation-intents { gap:0; margin:0; overflow:hidden; border:1px solid #ddd; border-radius:14px; background:#fafafa; }
-.browser-annotation-intents button { min-height:48px; border:0; border-right:1px solid #c7c7c7; border-radius:0; color:#191919; font-size:17px; }
+.browser-annotation-intent-label { display:block; margin:12px 2px 5px; color:#777; font-size:12px; }
+.browser-annotation-intents { gap:0; margin:0; overflow:hidden; border:1px solid #ddd; border-radius:10px; background:#fafafa; }
+.browser-annotation-intents button { min-height:36px; border:0; border-right:1px solid #c7c7c7; border-radius:0; color:#191919; font-size:13px; }
 .browser-annotation-intents button:last-child { border-right:0; }
 .browser-annotation-intents button:hover { background:#f1f1f1; }
 .browser-annotation-intents .active { color:#191919; border-color:#c7c7c7; background:#e7e7e7; box-shadow:inset 0 0 0 1px #d0d0d0; }
-.browser-annotation-actions { gap:12px; margin-top:17px; }
-.browser-annotation-actions button { min-height:48px; padding:0 16px; color:#202124; border-radius:13px; font-size:18px; }
-.browser-annotation-actions .browser-tool-primary { min-width:186px; background:#8d8d8d!important; }
+.browser-annotation-actions { gap:8px; margin-top:11px; }
+.browser-annotation-actions button { min-height:36px; padding:0 12px; color:#202124; border-radius:9px; font-size:13px; }
+.browser-annotation-actions .browser-tool-primary { min-width:138px; background:#8d8d8d!important; }
 .browser-annotation-actions .browser-tool-primary:not(:disabled) { background:#202020!important; }
-.browser-annotation-actions kbd { margin-left:4px; padding:3px 7px; border:1px solid rgba(255,255,255,.28); border-radius:5px; color:#f3f3f3; background:rgba(255,255,255,.08); font:600 13px var(--font-mono); }
+.browser-annotation-actions kbd { margin-left:3px; padding:2px 5px; border:1px solid rgba(255,255,255,.28); border-radius:4px; color:#f3f3f3; background:rgba(255,255,255,.08); font:600 10px var(--font-mono); }
 .browser-annotation-backdrop { position:absolute; z-index:47; top:36px; right:0; bottom:0; left:0; width:100%; height:calc(100% - 36px); object-fit:fill; background:#fff; user-select:none; }
 .browser-annotation-dialog.browser-annotation-positioned { right:auto; transform:none; }
 

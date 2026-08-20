@@ -77,10 +77,10 @@ export default function AnnotatePageElement({ surfaceRef, disabled }: BrowserToo
 
   const dialogPosition = pending ? (() => {
     const rect = pending.target.rectViewport;
-    const dialogWidth = Math.min(528, Math.max(300, pending.page.viewportWidth - 28));
+    const dialogWidth = Math.min(420, Math.max(280, pending.page.viewportWidth - 28));
     const left = Math.max(14, Math.min(pending.page.viewportWidth - dialogWidth - 14, rect.x + rect.width - dialogWidth));
     const below = rect.y + rect.height + 10;
-    const top = below + 410 < pending.page.viewportHeight ? below : Math.max(10, rect.y - 410);
+    const top = below + 315 < pending.page.viewportHeight ? below : Math.max(10, rect.y - 315);
     return { left, top: top + 36, width: dialogWidth };
   })() : undefined;
 
@@ -88,12 +88,12 @@ export default function AnnotatePageElement({ surfaceRef, disabled }: BrowserToo
     <button type="button" onClick={start} disabled={disabled} aria-pressed={active} title="注释页面元素" className={`browser-tool-button ${active ? "browser-tool-button-active" : ""}`}><MessageSquarePlus size={15} />{items.length > 0 && <span className="browser-tool-count">{items.length}</span>}</button>
     {backdrop && <img className="browser-annotation-backdrop" src={backdrop} alt="" aria-hidden="true" />}
     {pending && <div className="browser-annotation-dialog browser-annotation-positioned" style={dialogPosition} role="dialog" aria-label="添加页面注释">
-      <div className="browser-annotation-title"><span>{pending.target.text || pending.target.accessibleName || pending.target.tagName}</span><button aria-label="关闭" onClick={cancel}><X size={17} /></button></div>
+      <div className="browser-annotation-title"><span>{pending.target.text || pending.target.accessibleName || pending.target.tagName}</span><button aria-label="关闭" onClick={cancel}><X size={14} /></button></div>
       <code className="browser-annotation-selector">{pending.target.selector}</code>
       <textarea autoFocus value={comment} onChange={(event) => setComment(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && event.ctrlKey) { event.preventDefault(); add(); } }} placeholder="描述智能体应该在这里改变什么……" maxLength={2000} />
       <label className="browser-annotation-intent-label">意图</label>
-      <div className="browser-annotation-intents">{INTENTS.map((option) => { const Icon = option.icon; return <button key={option.id} className={intent === option.id ? "active" : ""} onClick={() => setIntent(option.id)}><Icon size={20} />{option.label}</button>; })}</div>
-      <div className="browser-annotation-actions"><button onClick={cancel}>取消</button><button className="browser-tool-primary" disabled={!comment.trim()} onClick={add}><MessageSquarePlus size={19} />添加 <kbd>Ctrl↵</kbd></button></div>
+      <div className="browser-annotation-intents">{INTENTS.map((option) => { const Icon = option.icon; return <button key={option.id} className={intent === option.id ? "active" : ""} onClick={() => setIntent(option.id)}><Icon size={16} />{option.label}</button>; })}</div>
+      <div className="browser-annotation-actions"><button onClick={cancel}>取消</button><button className="browser-tool-primary" disabled={!comment.trim()} onClick={add}><MessageSquarePlus size={15} />添加 <kbd>Ctrl↵</kbd></button></div>
     </div>}
     {items.length > 0 && surfaceRef.current?.kind !== "native" && <div className="browser-annotation-tray">
       <div className="browser-annotation-tray-header"><strong>{items.length} 条页面注释</strong><span><button title="复制全部" onClick={() => void copyAll()}>{copied ? <Check size={14} /> : <Send size={14} />}</button><button title="清空" onClick={clear}><Trash2 size={14} /></button></span></div>
