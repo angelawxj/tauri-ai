@@ -649,16 +649,16 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
       { label: t.explorer.newFolder, icon: IconFolderPlus, onSelect: () => startNewFolder(creationParent, creationDepth) },
     ];
     if (!entry.isDir) {
-      items.push({ label: t.explorer.viewFile, icon: IconFile, onSelect: () => onOpenFile?.(entry.path) });
+      items.push({ label: t.explorer.viewFile, icon: IconFile, separatorBefore: true, onSelect: () => onOpenFile?.(entry.path) });
     }
-    items.push({ label: t.explorer.duplicate, icon: IconCopy, separatorBefore: true, onSelect: () => void requestDuplicate(entry) });
+    items.push({ label: t.explorer.duplicate, icon: IconCopy, separatorBefore: entry.isDir, onSelect: () => void requestDuplicate(entry) });
     const menuPaths = selectedPaths.has(entry.path) && selectedPaths.size > 1 ? [...selectedPaths] : [entry.path];
     items.push({ label: t.explorer.copyAbsolutePath, icon: IconCopy, onSelect: () => copyPath(menuPaths.map(absolutePath).join("\n")) });
     items.push({ label: t.explorer.copyRelativePath, icon: IconCopy, onSelect: () => copyPath(menuPaths.join("\n")) });
     if (entry.isDir && expandedPaths.has(entry.path)) {
-      items.push({ label: t.explorer.collapseFolder, icon: IconListCollapse, separatorBefore: true, onSelect: () => collapseFolderSubtree(entry.path) });
+      items.push({ label: t.explorer.collapseFolder, icon: IconListCollapse, onSelect: () => collapseFolderSubtree(entry.path) });
     }
-    items.push({ label: t.explorer.revealInFileManager, icon: IconExternalLink, separatorBefore: true, onSelect: () => void reveal(entry.path) });
+    items.push({ label: t.explorer.revealInFileManager, icon: IconExternalLink, onSelect: () => void reveal(entry.path) });
     items.push({ label: t.explorer.rename, icon: IconPencil, shortcut: "F2", separatorBefore: true, onSelect: () => startRename(entry, depth) });
     items.push({
       label: t.explorer.delete,
