@@ -17,6 +17,7 @@ fn main() {
             explorer::fs::explorer_set_current_project,
             explorer::fs::explorer_list_dir,
             explorer::fs::explorer_read_file,
+            explorer::fs::explorer_resolve_local_html_url,
             explorer::fs::explorer_create_file,
             explorer::fs::explorer_create_dir,
             explorer::fs::explorer_rename,

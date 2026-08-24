@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>扫雷小游戏</title>
+  <style>
+    :root { color-scheme: dark; font-family: Inter, "Microsoft YaHei", sans-serif; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; background: radial-gradient(circle at top, #334155, #0f172a 62%); color: #f8fafc; }
+    .game { width: min(94vw, 720px); padding: 24px; border: 1px solid #475569; border-radius: 18px; background: rgba(15, 23, 42, .9); box-shadow: 0 24px 70px rgba(0,0,0,.42); }
+    h1 { margin: 0 0 18px; text-align: center; font-size: 28px; }
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin-bottom: 14px; }
+    select, button { border: 1px solid #64748b; border-radius: 9px; color: #f8fafc; background: #1e293b; font: inherit; }
+    select { padding: 9px 12px; }
+    button { padding: 9px 14px; cursor: pointer; }
+    button:hover { background: #334155; }
+    .status { display: flex; justify-content: center; gap: 24px; margin: 12px 0 16px; color: #cbd5e1; font-variant-numeric: tabular-nums; }
+    #message { min-height: 24px; text-align: center; color: #fbbf24; font-weight: 700; }
+    .board-wrap { overflow: auto; padding: 4px; }
+    #board { display: grid; gap: 3px; width: max-content; margin: auto; user-select: none; }
+    .cell { width: 30px; height: 30px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 5px; background: linear-gradient(145deg, #64748b, #475569); font-weight: 800; }
+    .cell:hover:not(.open) { background: #7890ac; }
+    .cell.open { cursor: default; background: #e2e8f0; color: #0f172a; }
+    .cell.mine { background: #ef4444; }
+    .cell.flagged { color: #fde047; }
+    .n1 { color: #2563eb !important; } .n2 { color: #16a34a !important; } .n3 { color: #dc2626 !important; }
+    .n4 { color: #7c3aed !important; } .n5 { color: #9f1239 !important; } .n6 { color: #0891b2 !important; }
+    .hint { margin: 16px 0 0; text-align: center; color: #94a3b8; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <main class="game">
+    <h1>💣 扫雷</h1>
+    <div class="toolbar">
+      <label>难度：
+        <select id="difficulty">
+          <option value="9,9,10">初级 9×9</option>
+          <option value="16,16,40">中级 16×16</option>
+          <option value="16,30,99">高级 16×30</option>
+        </select>
+      </label>
+      <button id="restart">🙂 重新开始</button>
+    </div>
+    <div class="status"><span>剩余雷数：<b id="remaining">10</b></span><span>用时：<b id="timer">0</b> 秒</span></div>
+    <div id="message"></div>
+    <div class="board-wrap"><div id="board" aria-label="扫雷棋盘"></div></div>
+    <p class="hint">左键翻开方块，右键插旗。第一次点击永远安全。</p>
+  </main>
+  <script>
+    const boardEl = document.querySelector('#board');
+    const difficultyEl = document.querySelector('#difficulty');
+    const remainingEl = document.querySelector('#remaining');
+    const timerEl = document.querySelector('#timer');
+    const messageEl = document.querySelector('#message');
+    let rows, cols, mineCount, cells, started, ended, flags, seconds, timer;
+
+    function reset() {
+      clearInterval(timer);
+      [rows, cols, mineCount] = difficultyEl.value.split(',').map(Number);
+      cells = Array.from({ length: rows * cols }, (_, i) => ({ i, mine: false, open: false, flag: false, near: 0 }));
+      started = ended = false; flags = seconds = 0;
+      remainingEl.textContent = mineCount; timerEl.textContent = '0'; messageEl.textContent = '';
+      boardEl.style.gridTemplateColumns = `repeat(${cols}, 30px)`;
+      render();
+    }
+
+    function neighbors(index) {
+      const r = Math.floor(index / cols), c = index % cols, result = [];
+      for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+        const nr = r + dr, nc = c + dc;
+        if ((dr || dc) && nr >= 0 && nr < rows && nc >= 0 && nc < cols) result.push(nr * cols + nc);
+      }
+      return result;
+    }
+
+    function plantMines(safeIndex) {
+      const forbidden = new Set([safeIndex, ...neighbors(safeIndex)]);
+      let candidates = cells.map(c => c.i).filter(i => !forbidden.has(i));
+      for (let i = candidates.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1)); [candidates[i], candidates[j]] = [candidates[j], candidates[i]];
+      }
+      candidates.slice(0, mineCount).forEach(i => cells[i].mine = true);
+      cells.forEach(cell => cell.near = neighbors(cell.i).filter(i => cells[i].mine).length);
+    }
+
+    function openCell(index) {
+      if (ended || cells[index].open || cells[index].flag) return;
+      if (!started) {
+        started = true; plantMines(index);
+        timer = setInterval(() => { seconds++; timerEl.textContent = seconds; }, 1000);
+      }
+      const cell = cells[index];
+      if (cell.mine) { cell.open = true; finish(false); return; }
+      const queue = [index];
+      while (queue.length) {
+        const current = cells[queue.shift()];
+        if (current.open || current.flag) continue;
+        current.open = true;
+        if (current.near === 0) neighbors(current.i).forEach(i => { if (!cells[i].open && !cells[i].mine) queue.push(i); });
+      }
+      if (cells.filter(c => c.open).length === rows * cols - mineCount) finish(true);
+      render();
+    }
+
+    function toggleFlag(index) {
+      if (ended || cells[index].open) return;
+      cells[index].flag = !cells[index].flag;
+      flags += cells[index].flag ? 1 : -1;
+      remainingEl.textContent = mineCount - flags;
+      render();
+    }
+
+    function finish(won) {
+      ended = true; clearInterval(timer);
+      if (!won) cells.forEach(c => { if (c.mine) c.open = true; });
+      messageEl.textContent = won ? `🎉 排雷成功！用时 ${seconds} 秒` : '💥 踩到地雷了，再试一次吧！';
+      render();
+    }
+
+    function render() {
+      boardEl.replaceChildren(...cells.map(cell => {
+        const button = document.createElement('button');
+        button.className = `cell${cell.open ? ' open' : ''}${cell.open && cell.mine ? ' mine' : ''}${cell.flag ? ' flagged' : ''}${cell.open && cell.near ? ` n${cell.near}` : ''}`;
+        button.textContent = cell.flag ? '⚑' : cell.open ? (cell.mine ? '💣' : cell.near || '') : '';
+        button.setAttribute('aria-label', cell.open ? `已翻开，周围 ${cell.near} 个雷` : '未翻开');
+        button.onclick = () => openCell(cell.i);
+        button.oncontextmenu = event => { event.preventDefault(); toggleFlag(cell.i); };
+        return button;
+      }));
+    }
+
+    document.querySelector('#restart').onclick = reset;
+    difficultyEl.onchange = reset;
+    reset();
+  </script>
+</body>
+</html>

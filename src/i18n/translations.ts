@@ -69,6 +69,7 @@ export interface TranslationDict {
     notConnected: string;
     crossOriginNotice: string;
     popOut: string;
+    openLocalHtml: string;
   };
   artifacts: {
     empty: string;
@@ -277,13 +278,14 @@ const zh: TranslationDict = {
     resizePanel: "调整右侧面板宽度",
   },
   browser: {
-    addressPlaceholder: "输入项目内文件路径或 https:// 网址…",
+    addressPlaceholder: "输入项目内文件路径、HTML 文件路径或 https:// 网址…",
     loading: "加载中…",
     loadFailed: "加载失败",
     empty: "没有可显示的内容",
     notConnected: "无法连接本地文件系统。当前处于浏览器预览模式，请在 Tauri 应用窗口中打开以浏览项目文件。",
     crossOriginNotice: "部分网站会拒绝被嵌入显示（浏览器的 X-Frame-Options/CSP 限制），这种情况无法绕过。",
     popOut: "在中间区域打开",
+    openLocalHtml: "打开本地 HTML 文件",
   },
   artifacts: {
     empty: "对话里创建产物后会显示在这里",
@@ -354,13 +356,14 @@ const en: TranslationDict = {
     resizePanel: "Resize right panel",
   },
   browser: {
-    addressPlaceholder: "Enter a project file path or an https:// URL…",
+    addressPlaceholder: "Enter a project path, HTML file path, or an https:// URL…",
     loading: "Loading…",
     loadFailed: "Failed to load",
     empty: "Nothing to display",
     notConnected: "Cannot connect to the local file system. Currently in browser preview mode — open this app inside the Tauri window to browse project files.",
     crossOriginNotice: "Some sites refuse to be embedded (browser X-Frame-Options/CSP restrictions) — this can't be worked around.",
     popOut: "Open in the main area",
+    openLocalHtml: "Open local HTML file",
   },
   artifacts: {
     empty: "Artifacts created in the chat will show up here",

@@ -600,6 +600,28 @@ pub fn explorer_read_file(path: String, state: State<ExplorerState>) -> Result<S
 }
 
 #[tauri::command]
+pub fn explorer_resolve_local_html_url(path: String) -> Result<String, String> {
+    let full = PathBuf::from(&path);
+    if !full.is_absolute() {
+        return Err("请选择本地 HTML 文件".to_string());
+    }
+    let is_html = full
+        .extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("html") || extension.eq_ignore_ascii_case("htm"));
+    if !is_html {
+        return Err("仅支持打开 .html 或 .htm 文件".to_string());
+    }
+    let metadata = fs::metadata(&full).map_err(|e| e.to_string())?;
+    if !metadata.is_file() {
+        return Err("所选路径不是文件".to_string());
+    }
+    url::Url::from_file_path(&full)
+        .map(|url| url.to_string())
+        .map_err(|_| "无法生成本地 HTML 文件地址".to_string())
+}
+
+#[tauri::command]
 pub fn explorer_create_file(
     parent_path: String,
     name: String,

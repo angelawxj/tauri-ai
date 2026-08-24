@@ -33,6 +33,7 @@ export const api = {
   setCurrentProject: (path: string) => call<ExplorerEntry[]>("explorer_set_current_project", { path }),
   listDir: (path?: string, showGitIgnored?: boolean) => call<ExplorerEntry[]>("explorer_list_dir", { path, showGitIgnored }),
   readFile: (path: string) => call<string>("explorer_read_file", { path }),
+  resolveLocalHtmlUrl: (path: string) => call<string>("explorer_resolve_local_html_url", { path }),
   createFile: (parentPath: string, name: string) => call<void>("explorer_create_file", { parentPath, name }),
   createDir: (parentPath: string, name: string) => call<void>("explorer_create_dir", { parentPath, name }),
   rename: (path: string, newName: string) => call<string>("explorer_rename", { path, newName }),

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IconCompass, IconExternalLink, IconRefresh } from "../icons";
+import { open } from "@tauri-apps/plugin-dialog";
+import { IconCompass, IconExternalLink, IconFile, IconRefresh } from "../icons";
 import { api as explorerApi, isApiUnavailable } from "../../features/explorer/api";
 import { useI18n } from "../../i18n";
 import { isHttpUrl, resolveContent, type Resolved } from "./browser-render";
@@ -36,15 +37,20 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
     setError(null);
     setUnavailable(false);
 
-    if (isHttpUrl(value)) {
+    if (isHttpUrl(value) || /^file:\/\/.*\.html?(?:[?#].*)?$/i.test(value)) {
       setResolved({ mode: "iframe-url", url: value });
       return;
     }
 
     setLoading(true);
-    explorerApi
-      .readFile(value)
-      .then((content) => resolveContent(value, content))
+    const isAbsoluteHtml = /^(?:[a-z]:[\\/]|\\\\|\/).+\.html?$/i.test(value);
+    const resolveTarget = isAbsoluteHtml
+      ? explorerApi.resolveLocalHtmlUrl(value).then((url) => {
+          setAddressInput(url);
+          return { mode: "iframe-url", url } as Resolved;
+        })
+      : explorerApi.readFile(value).then((content) => resolveContent(value, content));
+    resolveTarget
       .then((next) => setResolved(next))
       .catch((err) => {
         if (isApiUnavailable(err)) {
@@ -54,6 +60,28 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
         setError(err instanceof Error ? err.message : t.browser.loadFailed);
       })
       .finally(() => setLoading(false));
+  };
+
+  const openLocalHtml = async () => {
+    try {
+      const selected = await open({
+        multiple: false,
+        directory: false,
+        filters: [{ name: "HTML", extensions: ["html", "htm"] }],
+      });
+      if (!selected) return;
+      setError(null);
+      setUnavailable(false);
+      setLoading(true);
+      const url = await explorerApi.resolveLocalHtmlUrl(selected);
+      setAddressInput(url);
+      setResolved({ mode: "iframe-url", url });
+    } catch (err) {
+      if (isApiUnavailable(err)) setUnavailable(true);
+      else setError(err instanceof Error ? err.message : t.browser.loadFailed);
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -88,6 +116,9 @@ export default function Browser({ source, onPopOut }: BrowserProps) {
         />
         <button type="button" title={t.common.refresh} onClick={() => navigate(addressInput)} className="shrink-0 rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg">
           <IconRefresh size={13} />
+        </button>
+        <button type="button" title={t.browser.openLocalHtml} onClick={() => void openLocalHtml()} className="shrink-0 rounded p-1 text-vscode-fg-muted hover:bg-vscode-list-hover hover:text-vscode-fg">
+          <IconFile size={13} />
         </button>
         <span className="h-5 w-px shrink-0 bg-vscode-border-light" />
         <GrabPageElement surfaceRef={surfaceRef} disabled={!resolved || resolved.mode === "text"} />
