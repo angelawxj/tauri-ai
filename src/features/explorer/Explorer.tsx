@@ -94,6 +94,7 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   const [selectedPaths, setSelectedPaths] = useState<Set<string>>(new Set());
   const [anchorPath, setAnchorPath] = useState<string | null>(null);
   const [unavailable, setUnavailable] = useState(false);
+  const [projectReady, setProjectReady] = useState(false);
   const [rootError, setRootError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [filterQuery, setFilterQuery] = useState("");
@@ -114,6 +115,9 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   const refreshTimerRef = useRef<number | null>(null);
   const dragExpandTimerRef = useRef<number | null>(null);
   const nameFilterRequestRef = useRef(0);
+  const projectGenerationRef = useRef(0);
+  const dirRequestIdsRef = useRef(new Map<string, number>());
+  const projectReadyRef = useRef(false);
   const undoStackRef = useRef<FileOperation[]>([]);
   const redoStackRef = useRef<FileOperation[]>([]);
 
@@ -164,15 +168,21 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
 
   const loadDir = useCallback(
     (path: string) => {
+      if (!projectReadyRef.current) return;
+      const generation = projectGenerationRef.current;
+      const requestId = (dirRequestIdsRef.current.get(path) ?? 0) + 1;
+      dirRequestIdsRef.current.set(path, requestId);
       setDirCache((prev) => ({ ...prev, [path]: "loading" }));
       api
         .listDir(path || undefined, showGitIgnored)
         .then((entries) => {
+          if (generation !== projectGenerationRef.current || dirRequestIdsRef.current.get(path) !== requestId) return;
           setDirCache((prev) => ({ ...prev, [path]: entries }));
           setUnavailable(false);
           if (path === "") setRootError(null);
         })
         .catch((err) => {
+          if (generation !== projectGenerationRef.current || dirRequestIdsRef.current.get(path) !== requestId) return;
           if (isApiUnavailable(err)) {
             setUnavailable(true);
             return;
@@ -185,12 +195,55 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
     [showGitIgnored, t],
   );
 
-  // 初始加载 + "显示被 Git 忽略的文件"开关变化时重新拉取根目录和所有已展开目录
+  const initializeProject = useCallback(() => {
+    const generation = ++projectGenerationRef.current;
+    projectReadyRef.current = false;
+    setProjectReady(false);
+    dirRequestIdsRef.current.clear();
+    setDirCache({ "": "loading" });
+    setExpandedPaths(new Set());
+    setSelectedPaths(new Set());
+    setRootError(null);
+    setUnavailable(false);
+
+    const initialize = projectPath
+      ? api.setCurrentProject(projectPath)
+      : api.listDir(undefined, false);
+    void initialize
+      .then((entries) => {
+        if (generation !== projectGenerationRef.current) return;
+        projectReadyRef.current = true;
+        setProjectReady(true);
+        setDirCache({ "": entries });
+      })
+      .catch((err) => {
+        if (generation !== projectGenerationRef.current) return;
+        if (isApiUnavailable(err)) {
+          setUnavailable(true);
+          return;
+        }
+        const message = err instanceof Error ? err.message : t.explorer.loadDirFailed;
+        setDirCache({ "": "error" });
+        setRootError(message);
+      });
+  }, [projectPath, t]);
+
+  // The explorer owns project initialization so its first directory request cannot
+  // race the backend's current-root switch. App only initializes source control.
   useEffect(() => {
+    initializeProject();
+    return () => {
+      projectGenerationRef.current += 1;
+      projectReadyRef.current = false;
+    };
+  }, [initializeProject]);
+
+  // “显示被 Git 忽略的文件”变化后刷新当前可见树；初始化尚未完成时由上面的流程负责首屏。
+  useEffect(() => {
+    if (!projectReady) return;
     loadDir("");
-    expandedPathsRef.current.forEach((p) => loadDir(p));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [showGitIgnored]);
+    expandedPathsRef.current.forEach((path) => loadDir(path));
+  }, [showGitIgnored, projectReady, loadDir]);
 
   useEffect(() => {
     loadGitStatus();
@@ -589,15 +642,16 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   };
 
   const buildMenuItems = (entry: ExplorerEntry, depth: number): ExplorerMenuItem[] => {
-    const items: ExplorerMenuItem[] = [];
-    if (entry.isDir) {
-      items.push({ label: t.explorer.newFile, icon: IconFilePlus, onSelect: () => startNewFile(entry.path, depth + 1) });
-      items.push({ label: t.explorer.newFolder, icon: IconFolderPlus, onSelect: () => startNewFolder(entry.path, depth + 1) });
-    }
+    const creationParent = entry.isDir ? entry.path : dirname(entry.path);
+    const creationDepth = entry.isDir ? depth + 1 : depth;
+    const items: ExplorerMenuItem[] = [
+      { label: t.explorer.newFile, icon: IconFilePlus, onSelect: () => startNewFile(creationParent, creationDepth) },
+      { label: t.explorer.newFolder, icon: IconFolderPlus, onSelect: () => startNewFolder(creationParent, creationDepth) },
+    ];
     if (!entry.isDir) {
       items.push({ label: t.explorer.viewFile, icon: IconFile, onSelect: () => onOpenFile?.(entry.path) });
     }
-    items.push({ label: t.explorer.duplicate, icon: IconCopy, separatorBefore: entry.isDir, onSelect: () => void requestDuplicate(entry) });
+    items.push({ label: t.explorer.duplicate, icon: IconCopy, separatorBefore: true, onSelect: () => void requestDuplicate(entry) });
     const menuPaths = selectedPaths.has(entry.path) && selectedPaths.size > 1 ? [...selectedPaths] : [entry.path];
     items.push({ label: t.explorer.copyAbsolutePath, icon: IconCopy, onSelect: () => copyPath(menuPaths.map(absolutePath).join("\n")) });
     items.push({ label: t.explorer.copyRelativePath, icon: IconCopy, onSelect: () => copyPath(menuPaths.join("\n")) });
@@ -717,16 +771,27 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
       >
         {unavailable && <div className="px-4 py-3 text-center text-[11px] leading-relaxed text-vscode-fg-muted">{t.explorer.browserPreviewNotice}</div>}
         {!unavailable && (dirCache[""] === "loading" || nameFilterLoading) && <div className="flex h-full items-center justify-center text-[11px] text-vscode-fg-muted">{t.explorer.loadingTree}</div>}
-        {!unavailable && dirCache[""] === "error" && <div className="flex h-full items-center justify-center px-4 text-center text-[11px] text-vscode-fg-muted">{rootError}</div>}
+        {!unavailable && dirCache[""] === "error" && (
+          <button type="button" onClick={initializeProject} className="flex h-full w-full items-center justify-center px-4 text-center text-[11px] text-red-400 hover:bg-vscode-list-hover">
+            {rootError || t.explorer.loadDirFailed} · {t.common.refresh}
+          </button>
+        )}
         {!unavailable && !filterQuery && isEmpty && <div className="flex h-full items-center justify-center px-4 text-center text-[11px] text-vscode-fg-muted">{t.explorer.emptyDirectory}</div>}
         {!unavailable && filterQuery && !nameFilterLoading && visibleRows.length === 0 && <div className="flex h-full items-center justify-center px-4 text-center text-[11px] text-vscode-fg-muted">{t.explorer.noSearchResults}</div>}
         {!unavailable && !nameFilterLoading &&
           visibleRows.map((row, i) => {
             if (row.kind === "status") {
               return (
-                <div key={`status-${i}`} style={{ paddingLeft: row.depth * 16 + 8 + 20 }} className={`py-1 text-[11px] ${row.status === "error" ? "text-red-400" : "text-vscode-fg-dim"}`}>
-                  {row.status === "error" ? t.explorer.loadDirFailed : t.explorer.emptyDirectory}
-                </div>
+                row.status === "error" ? (
+                  <button key={`status-${i}`} type="button" onClick={() => {
+                    const parent = [...visibleRows.slice(0, i)].reverse().find((candidate) => candidate.kind === "entry" && candidate.entry.isDir && candidate.depth === row.depth - 1);
+                    if (parent?.kind === "entry") loadDir(parent.entry.path);
+                  }} style={{ paddingLeft: row.depth * 16 + 8 + 20 }} className="w-full py-1 text-left text-[11px] text-red-400 hover:bg-vscode-list-hover">
+                    {t.explorer.loadDirFailed} · {t.common.refresh}
+                  </button>
+                ) : (
+                  <div key={`status-${i}`} style={{ paddingLeft: row.depth * 16 + 8 + 20 }} className="py-1 text-[11px] text-vscode-fg-dim">{t.explorer.emptyDirectory}</div>
+                )
               );
             }
             const { entry, depth } = row;
