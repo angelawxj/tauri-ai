@@ -1,21 +1,55 @@
 use git2::Repository;
 use glob::Pattern;
-use notify::Watcher;
+use notify::event::ModifyKind;
+use notify::{EventKind, Watcher};
 use regex::RegexBuilder;
 use serde::Serialize;
+use std::collections::HashSet;
 use std::fs;
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
-use std::sync::Mutex;
-use tauri::{Emitter, State};
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
+use std::time::Duration;
+use tauri::{Emitter, Manager, State};
 use tauri_plugin_opener::OpenerExt;
 
 const MAX_PREVIEW_BYTES: u64 = 2 * 1024 * 1024;
-/// Event name the frontend listens to for "something changed under the watched root".
-/// Payload is intentionally omitted (frontend just refreshes whatever's currently expanded) —
-/// mapping raw OS paths back to our forward-slash relative-path cache keys reliably across
-/// platforms is more trouble than it's worth for what's ultimately a "please re-check" signal.
+/// Event name the frontend listens to for changes under the watched root.
 const WATCH_EVENT: &str = "explorer://changed";
+/// How often pending fs-watch events are flushed to the frontend. Coalescing on a fixed
+/// interval (rather than emitting per-event) keeps directories that other tools write to
+/// constantly - logs, caches, build output from unrelated nested projects - from flooding
+/// the UI with refreshes.
+const WATCH_FLUSH_INTERVAL: Duration = Duration::from_millis(300);
+fn is_git_internal_path(relative: &str) -> bool {
+    Path::new(relative).components().any(|component| {
+        matches!(component, Component::Normal(name) if name.eq_ignore_ascii_case(".git"))
+    })
+}
+
+fn relative_parent(relative: &str) -> String {
+    relative
+        .rsplit_once('/')
+        .map_or_else(String::new, |(parent, _)| parent.to_string())
+}
+
+#[derive(Default)]
+struct PendingWatchChanges {
+    structural_paths: HashSet<String>,
+    content_paths: HashSet<String>,
+    event_count: usize,
+}
+
+#[derive(Serialize, Clone)]
+#[serde(rename_all = "camelCase")]
+struct ExplorerChangedPayload {
+    directories: Vec<String>,
+    ignored_directories: Vec<String>,
+    git_dirty: bool,
+    event_count: usize,
+}
 
 #[derive(Serialize, Clone, Debug, PartialEq)]
 pub struct ExplorerEntry {
@@ -55,6 +89,9 @@ pub struct ExplorerState {
     root: Mutex<PathBuf>,
     /// Kept alive for as long as we want to keep watching; dropping it stops the watch.
     watcher: Mutex<Option<notify::RecommendedWatcher>>,
+    /// Bumped on every `start_watching` call so the previous watch's flush thread can tell
+    /// it has been superseded (by a project switch) and exit instead of leaking forever.
+    watch_epoch: AtomicU64,
 }
 
 impl ExplorerState {
@@ -62,6 +99,7 @@ impl ExplorerState {
         ExplorerState {
             root: Mutex::new(default_root()),
             watcher: Mutex::new(None),
+            watch_epoch: AtomicU64::new(0),
         }
     }
 }
@@ -119,12 +157,51 @@ fn project_path(root: &Path, relative: &str) -> Result<PathBuf, String> {
     })
 }
 
+/// Starts (or restarts) the recursive watch on `root`. Events are classified as content-only
+/// or structural and buffered in `pending`; a separate flush thread drains that buffer on a
+/// fixed interval. Only structural changes invalidate direct parent directories. This stays
+/// project-type agnostic while preventing continuously-written files from refreshing the tree.
 fn start_watching(state: &State<ExplorerState>, app: &tauri::AppHandle, root: &Path) {
-    let app_handle = app.clone();
+    let epoch = state.watch_epoch.fetch_add(1, Ordering::SeqCst) + 1;
+    let watched_root = root.to_path_buf();
+    let pending: Arc<Mutex<PendingWatchChanges>> =
+        Arc::new(Mutex::new(PendingWatchChanges::default()));
+
+    let callback_pending = Arc::clone(&pending);
+    let callback_root = watched_root.clone();
     let mut watcher =
         match notify::recommended_watcher(move |res: notify::Result<notify::Event>| {
-            if res.is_ok() {
-                let _ = app_handle.emit(WATCH_EVENT, ());
+            let Ok(event) = res else { return };
+            let mut pending = callback_pending
+                .lock()
+                .expect("explorer watch state poisoned");
+            let structural = matches!(
+                event.kind,
+                EventKind::Create(_)
+                    | EventKind::Remove(_)
+                    | EventKind::Modify(ModifyKind::Name(_))
+                    | EventKind::Any
+                    | EventKind::Other
+            );
+            for path in &event.paths {
+                let Ok(relative) = path.strip_prefix(&callback_root) else {
+                    continue;
+                };
+                let relative = relative.to_string_lossy().replace('\\', "/");
+                if relative.is_empty() || is_git_internal_path(&relative) {
+                    continue;
+                }
+                pending.event_count += 1;
+                // .gitignore content changes alter which entries list_dir returns, so they are
+                // structural from the Explorer's point of view.
+                let ignore_rules_changed = Path::new(&relative)
+                    .file_name()
+                    .is_some_and(|name| name.eq_ignore_ascii_case(".gitignore"));
+                if structural || ignore_rules_changed {
+                    pending.structural_paths.insert(relative);
+                } else {
+                    pending.content_paths.insert(relative);
+                }
             }
         }) {
             Ok(w) => w,
@@ -137,6 +214,54 @@ fn start_watching(state: &State<ExplorerState>, app: &tauri::AppHandle, root: &P
         return;
     }
     *state.watcher.lock().expect("explorer state poisoned") = Some(watcher);
+
+    let app_handle = app.clone();
+    thread::spawn(move || loop {
+        thread::sleep(WATCH_FLUSH_INTERVAL);
+        let explorer_state = app_handle.state::<ExplorerState>();
+        if explorer_state.watch_epoch.load(Ordering::SeqCst) != epoch {
+            return;
+        }
+        let changed = {
+            let mut pending = pending.lock().expect("explorer watch state poisoned");
+            std::mem::take(&mut *pending)
+        };
+        if changed.event_count == 0 {
+            continue;
+        }
+        let repo = Repository::open(&watched_root).ok();
+        let mut directories = HashSet::new();
+        let mut ignored_directories = HashSet::new();
+        for relative in changed.structural_paths {
+            let ignored = repo
+                .as_ref()
+                .is_some_and(|repo| repo.is_path_ignored(&relative).unwrap_or(false));
+            let target = if ignored {
+                &mut ignored_directories
+            } else {
+                &mut directories
+            };
+            target.insert(relative_parent(&relative));
+        }
+        let git_dirty = !directories.is_empty()
+            || changed.content_paths.into_iter().any(|relative| {
+                !repo
+                    .as_ref()
+                    .is_some_and(|repo| repo.is_path_ignored(&relative).unwrap_or(false))
+            });
+        if directories.is_empty() && ignored_directories.is_empty() && !git_dirty {
+            continue;
+        }
+        let _ = app_handle.emit(
+            WATCH_EVENT,
+            ExplorerChangedPayload {
+                directories: directories.into_iter().collect(),
+                ignored_directories: ignored_directories.into_iter().collect(),
+                git_dirty,
+                event_count: changed.event_count,
+            },
+        );
+    });
 }
 
 /// Filters entries using git2's own ignore rules (falls back to no filtering outside a
@@ -955,6 +1080,16 @@ mod tests {
             fs::read_to_string(root.path().join("folder 副本/inner.txt")).unwrap(),
             "x"
         );
+    }
+
+    #[test]
+    fn watcher_only_hard_excludes_git_internals() {
+        assert!(is_git_internal_path(".git/index"));
+        assert!(is_git_internal_path("nested/.git/objects/01/abc"));
+        assert!(!is_git_internal_path("custom-runtime/app.log"));
+        assert!(!is_git_internal_path("node_modules/pkg/index.js"));
+        assert_eq!(relative_parent("custom-runtime/app.log"), "custom-runtime");
+        assert_eq!(relative_parent("root.log"), "");
     }
 
     #[test]

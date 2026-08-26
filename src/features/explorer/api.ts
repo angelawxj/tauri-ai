@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import { listen } from "@tauri-apps/api/event";
+import { listen, type Event } from "@tauri-apps/api/event";
 import type { ExplorerEntry, ExplorerSearchResult } from "./types";
 import { explorerTranslations, detectExplorerLanguage } from "./i18n";
 
@@ -48,8 +48,15 @@ export const api = {
   findFiles: (query: string, showGitIgnored: boolean) => call<string[]>("explorer_find_files", { query, showGitIgnored }),
 };
 
-/** Fires whenever anything changes under the watched project root (no payload — just "re-check"). */
-export function onExplorerChanged(handler: () => void): () => void {
+export interface ExplorerChangedPayload {
+  directories: string[];
+  ignoredDirectories: string[];
+  gitDirty: boolean;
+  eventCount: number;
+}
+
+/** Fires with coalesced directory invalidations under the watched project root. */
+export function onExplorerChanged(handler: (event: Event<ExplorerChangedPayload>) => void): () => void {
   if (!isTauriRuntime()) return () => {};
   const unlisten = listen(WATCH_EVENT, handler);
   return () => {

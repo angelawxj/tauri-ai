@@ -64,6 +64,18 @@ interface FileOperation {
   redo: () => Promise<void>;
 }
 
+interface DirectoryActivity {
+  windowStartedAt: number;
+  eventCount: number;
+  busyUntil: number;
+  lastRefreshAt: number;
+}
+
+const DIRECTORY_REFRESH_INTERVAL = 500;
+const BUSY_DIRECTORY_REFRESH_INTERVAL = 2_000;
+const BUSY_DIRECTORY_EVENT_THRESHOLD = 20;
+const GIT_REFRESH_INTERVAL = 1_500;
+
 const isMac = typeof navigator !== "undefined" && navigator.userAgent.includes("Mac");
 
 const STATUS_PRIORITY: Record<FileStatus, number> = { C: 6, D: 5, M: 4, A: 3, U: 3, R: 2 };
@@ -79,6 +91,20 @@ function dominantStatus(statuses: Iterable<FileStatus>): FileStatus | undefined 
 function dirname(path: string): string {
   const idx = path.lastIndexOf("/");
   return idx === -1 ? "" : path.slice(0, idx);
+}
+
+function explorerEntriesEqual(current: DirState | undefined, next: ExplorerEntry[]): boolean {
+  return Array.isArray(current) && current.length === next.length && current.every((entry, index) => {
+    const other = next[index];
+    return entry.path === other.path && entry.name === other.name && entry.isDir === other.isDir && entry.ignored === other.ignored;
+  });
+}
+
+function gitEntriesEqual(current: FileEntry[], next: FileEntry[]): boolean {
+  return current.length === next.length && current.every((entry, index) => {
+    const other = next[index];
+    return entry.path === other.path && entry.status === other.status && entry.additions === other.additions && entry.deletions === other.deletions;
+  });
 }
 
 function selectionMode(event: React.MouseEvent, mac: boolean): "replace" | "toggle" | "range" {
@@ -112,7 +138,12 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   const [dropTargetPath, setDropTargetPath] = useState<string | null>(null);
   const draggingPathRef = useRef<string | null>(null);
   const expandedPathsRef = useRef(expandedPaths);
-  const refreshTimerRef = useRef<number | null>(null);
+  const dirtyDirectoriesRef = useRef(new Set<string>());
+  const directoryActivityRef = useRef(new Map<string, DirectoryActivity>());
+  const directoryRequestsRef = useRef(new Set<string>());
+  const gitStatusDirtyRef = useRef(false);
+  const gitStatusInFlightRef = useRef(false);
+  const lastGitRefreshRef = useRef(0);
   const dragExpandTimerRef = useRef<number | null>(null);
   const nameFilterRequestRef = useRef(0);
   const projectGenerationRef = useRef(0);
@@ -121,11 +152,22 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   const undoStackRef = useRef<FileOperation[]>([]);
   const redoStackRef = useRef<FileOperation[]>([]);
 
-  const loadGitStatus = useCallback(() => {
+  const loadGitStatus = useCallback((force = true) => {
+    const now = Date.now();
+    if (gitStatusInFlightRef.current || (!force && now - lastGitRefreshRef.current < GIT_REFRESH_INTERVAL)) return;
+    gitStatusInFlightRef.current = true;
+    gitStatusDirtyRef.current = false;
     void gitApi
       .status()
-      .then((status) => setGitEntries([...status.staged, ...status.unstaged]))
-      .catch(() => setGitEntries([]));
+      .then((status) => {
+        const entries = [...status.staged, ...status.unstaged];
+        setGitEntries((current) => gitEntriesEqual(current, entries) ? current : entries);
+      })
+      .catch(() => setGitEntries((current) => current.length === 0 ? current : []))
+      .finally(() => {
+        gitStatusInFlightRef.current = false;
+        lastGitRefreshRef.current = Date.now();
+      });
   }, []);
 
   const commitOperation = (operation: FileOperation) => {
@@ -167,17 +209,22 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
   }, [expandedPaths]);
 
   const loadDir = useCallback(
-    (path: string) => {
+    (path: string, silent = false) => {
       if (!projectReadyRef.current) return;
+      if (directoryRequestsRef.current.has(path)) {
+        dirtyDirectoriesRef.current.add(path);
+        return;
+      }
+      directoryRequestsRef.current.add(path);
       const generation = projectGenerationRef.current;
       const requestId = (dirRequestIdsRef.current.get(path) ?? 0) + 1;
       dirRequestIdsRef.current.set(path, requestId);
-      setDirCache((prev) => ({ ...prev, [path]: "loading" }));
+      if (!silent) setDirCache((prev) => ({ ...prev, [path]: "loading" }));
       api
         .listDir(path || undefined, showGitIgnored)
         .then((entries) => {
           if (generation !== projectGenerationRef.current || dirRequestIdsRef.current.get(path) !== requestId) return;
-          setDirCache((prev) => ({ ...prev, [path]: entries }));
+          setDirCache((prev) => explorerEntriesEqual(prev[path], entries) ? prev : { ...prev, [path]: entries });
           setUnavailable(false);
           if (path === "") setRootError(null);
         })
@@ -188,8 +235,11 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
             return;
           }
           const message = err instanceof Error ? err.message : t.explorer.loadDirFailed;
-          setDirCache((prev) => ({ ...prev, [path]: "error" }));
+          if (!silent) setDirCache((prev) => ({ ...prev, [path]: "error" }));
           if (path === "") setRootError(message);
+        })
+        .finally(() => {
+          directoryRequestsRef.current.delete(path);
         });
     },
     [showGitIgnored, t],
@@ -200,6 +250,9 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
     projectReadyRef.current = false;
     setProjectReady(false);
     dirRequestIdsRef.current.clear();
+    dirtyDirectoriesRef.current.clear();
+    directoryActivityRef.current.clear();
+    directoryRequestsRef.current.clear();
     setDirCache({ "": "loading" });
     setExpandedPaths(new Set());
     setSelectedPaths(new Set());
@@ -247,6 +300,13 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
 
   useEffect(() => {
     loadGitStatus();
+  }, [loadGitStatus]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      if (gitStatusDirtyRef.current && document.visibilityState === "visible") loadGitStatus(false);
+    }, 500);
+    return () => window.clearInterval(timer);
   }, [loadGitStatus]);
 
   useEffect(() => {
@@ -308,17 +368,56 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
     };
   }, [gitEntries]);
 
-  // 目录变化监听（notify 后端 watcher），做个简单防抖避免一次保存触发多次刷新
+  // Watch events only invalidate direct parents. A fixed-rate scheduler below applies
+  // backpressure per directory, so a custom log/cache folder cannot refresh the whole tree.
   useEffect(() => {
-    const unsubscribe = onExplorerChanged(() => {
-      if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
-      refreshTimerRef.current = window.setTimeout(refreshAll, 400);
+    const unsubscribe = onExplorerChanged((event) => {
+      const directories = showGitIgnored
+        ? [...event.payload.directories, ...event.payload.ignoredDirectories]
+        : event.payload.directories;
+      const now = Date.now();
+      for (const path of directories) {
+        dirtyDirectoriesRef.current.add(path);
+        const activity = directoryActivityRef.current.get(path) ?? {
+          windowStartedAt: now,
+          eventCount: 0,
+          busyUntil: 0,
+          lastRefreshAt: 0,
+        };
+        if (now - activity.windowStartedAt >= 1_000) {
+          activity.windowStartedAt = now;
+          activity.eventCount = 0;
+        }
+        activity.eventCount += Math.max(1, event.payload.eventCount);
+        if (activity.eventCount >= BUSY_DIRECTORY_EVENT_THRESHOLD) activity.busyUntil = now + 2_000;
+        directoryActivityRef.current.set(path, activity);
+      }
+      if (event.payload.gitDirty) gitStatusDirtyRef.current = true;
     });
-    return () => {
-      unsubscribe();
-      if (refreshTimerRef.current) window.clearTimeout(refreshTimerRef.current);
-    };
-  }, [refreshAll]);
+    return unsubscribe;
+  }, [showGitIgnored]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      const now = Date.now();
+      for (const path of [...dirtyDirectoriesRef.current]) {
+        if (path !== "" && !expandedPathsRef.current.has(path)) continue;
+        const activity = directoryActivityRef.current.get(path) ?? {
+          windowStartedAt: now,
+          eventCount: 0,
+          busyUntil: 0,
+          lastRefreshAt: 0,
+        };
+        const minimumInterval = activity.busyUntil > now ? BUSY_DIRECTORY_REFRESH_INTERVAL : DIRECTORY_REFRESH_INTERVAL;
+        if (directoryRequestsRef.current.has(path) || now - activity.lastRefreshAt < minimumInterval) continue;
+        dirtyDirectoriesRef.current.delete(path);
+        activity.lastRefreshAt = now;
+        directoryActivityRef.current.set(path, activity);
+        loadDir(path, true);
+      }
+    }, 250);
+    return () => window.clearInterval(timer);
+  }, [loadDir]);
 
   const toggleDir = useCallback(
     (path: string) => {
@@ -328,7 +427,7 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
           next.delete(path);
         } else {
           next.add(path);
-          if (!dirCache[path]) loadDir(path);
+          if (!dirCache[path] || dirtyDirectoriesRef.current.delete(path)) loadDir(path);
         }
         return next;
       });
@@ -340,7 +439,7 @@ export default function Explorer({ onOpenFile, projectName, projectPath }: Explo
     (path: string) => {
       if (!path) return;
       setExpandedPaths((prev) => (prev.has(path) ? prev : new Set(prev).add(path)));
-      if (!dirCache[path]) loadDir(path);
+      if (!dirCache[path] || dirtyDirectoriesRef.current.delete(path)) loadDir(path);
     },
     [dirCache, loadDir],
   );
