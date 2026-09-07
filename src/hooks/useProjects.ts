@@ -28,6 +28,7 @@ interface UseProjectsResult {
   setActiveId: (id: string) => void;
   addProject: (path: string, name: string) => Project;
   removeProject: (id: string) => void;
+  reorderProject: (draggedId: string, targetId: string, position: "before" | "after") => void;
 }
 
 export function useProjects(): UseProjectsResult {
@@ -59,7 +60,20 @@ export function useProjects(): UseProjectsResult {
     setActiveId((current) => (current === id ? null : current));
   };
 
+  const reorderProject = (draggedId: string, targetId: string, position: "before" | "after") => {
+    if (draggedId === targetId) return;
+    setProjects((current) => {
+      const dragged = current.find((project) => project.id === draggedId);
+      if (!dragged || !current.some((project) => project.id === targetId)) return current;
+
+      const reordered = current.filter((project) => project.id !== draggedId);
+      const targetIndex = reordered.findIndex((project) => project.id === targetId);
+      reordered.splice(targetIndex + (position === "after" ? 1 : 0), 0, dragged);
+      return reordered;
+    });
+  };
+
   const activeProject = projects.find((p) => p.id === activeId) ?? null;
 
-  return { projects, activeProject, setActiveId, addProject, removeProject };
+  return { projects, activeProject, setActiveId, addProject, removeProject, reorderProject };
 }

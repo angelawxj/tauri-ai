@@ -19,7 +19,7 @@ export default function App() {
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
   const [textArtifactRequest, setTextArtifactRequest] = useState<Artifact | null>(null);
   const [openBrowserTab, setOpenBrowserTab] = useState<PoppedBrowser | null>(null);
-  const { projects, activeProject, setActiveId, addProject, removeProject } = useProjects();
+  const { projects, activeProject, setActiveId, addProject, removeProject, reorderProject } = useProjects();
   const [projectError, setProjectError] = useState<string | null>(null);
   const seededRef = useRef(false);
 
@@ -82,6 +82,7 @@ export default function App() {
         onSelectProject={setActiveId}
         onAddProject={() => void handleAddProject()}
         onRemoveProject={removeProject}
+        onReorderProject={reorderProject}
         projectError={projectError}
       />
       <MainArea

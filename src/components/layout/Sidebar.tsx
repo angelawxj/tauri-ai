@@ -13,6 +13,7 @@ interface SidebarProps {
   onSelectProject: (id: string) => void;
   onAddProject: () => void;
   onRemoveProject: (id: string) => void;
+  onReorderProject: (draggedId: string, targetId: string, position: "before" | "after") => void;
   projectError: string | null;
 }
 
@@ -24,6 +25,7 @@ export default function Sidebar({
   onSelectProject,
   onAddProject,
   onRemoveProject,
+  onReorderProject,
   projectError,
 }: SidebarProps) {
   const { t, lang, toggleLang } = useI18n();
@@ -50,6 +52,7 @@ export default function Sidebar({
         onSelect={onSelectProject}
         onAdd={onAddProject}
         onRemove={onRemoveProject}
+        onReorder={onReorderProject}
         error={projectError}
       />
 
