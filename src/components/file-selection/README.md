@@ -76,7 +76,7 @@ const [instance, setInstance] = useState<editor.IStandaloneCodeEditor | null>(nu
 - `FileSelectionPreview.tsx`：组合编辑器和划词操作。
 - `MonacoFileEditor.tsx`：模型生命周期、语法高亮、受控内容、只读开关、保存快捷键。
 - `SelectionActions.tsx`：菜单、紧凑编辑输入条、本地评论和边界定位。
-- `CommentZone.tsx`：通过 Monaco ViewZone 在选区结束行后插入 208px 空间，192px 评论卡片占据真实编辑器布局；取消或删除会释放空间。
+- `CommentZone.tsx`：通过 Monaco ViewZone 在选区结束行后插入 140px 空间，128px 评论卡片占据真实编辑器布局；取消或删除会释放空间。
 - `useMonacoSelection.ts`：Monaco 选区、原文/行号/偏移、持续高亮、滚动与布局更新。
 - `monaco.ts`：本地 worker 和语言映射；已有宿主 worker 配置时不覆盖。
 - `types.ts` / `index.ts`：公开数据类型与接口。
@@ -98,5 +98,6 @@ const [instance, setInstance] = useState<editor.IStandaloneCodeEditor | null>(nu
 启动 `npm run dev` 后打开 `/src/components/file-selection/example/index.html`，可验证选区、回调、主题、滚动和缩放；当前应用已在 `src/features/explorer/FileTab.tsx` 接入。
 
 Monaco 官方 Vite 集成说明：https://github.com/microsoft/monaco-editor/blob/main/docs/integrate-esm.md
+
 
 

@@ -10,7 +10,7 @@ export function CommentZone({ editor: ed, line, children }: { editor: editor.ISt
     element.className = "file-selection-comment-zone";
     let zone = "";
     ed.changeViewZones((accessor) => {
-      zone = accessor.addZone({ afterLineNumber: line, heightInPx: 208, domNode: element, suppressMouseDown: true });
+      zone = accessor.addZone({ afterLineNumber: line, heightInPx: 140, domNode: element, suppressMouseDown: true });
     });
     const layout = () => {
       element.style.paddingRight = `${Math.max(8, ed.getLayoutInfo().verticalScrollbarWidth)}px`;
@@ -25,3 +25,4 @@ export function CommentZone({ editor: ed, line, children }: { editor: editor.ISt
   }, [ed, line]);
   return node ? createPortal(children, node) : null;
 }
+

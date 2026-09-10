@@ -48,20 +48,21 @@
   --fs-bg: #fff; --fs-fg: #202124; --fs-muted: #888; --fs-border: #e5e5e5;
 }
 
-.file-selection-comment-zone { box-sizing: border-box; padding: 8px 8px 8px 0; background: rgba(128,128,128,.035); pointer-events: auto; }
-.file-selection-comment-card { box-sizing: border-box; height: 192px; padding: 15px 18px 16px; border: 1px solid var(--color-vscode-border-light, var(--color-border, #e1e1e1)); border-radius: 16px; background: var(--color-vscode-bg, var(--color-background, #fff)); box-shadow: 0 5px 14px #00000009; color: var(--color-vscode-fg-muted, var(--color-text-tertiary, #999)); font: 16px/1.5 sans-serif; display: flex; flex-direction: column; }
-.file-selection-comment-header { display: flex; align-items: center; gap: 14px; min-height: 36px; }
-.file-selection-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 36px; height: 36px; border-radius: 50%; background: #9ca582; color: white; font: 13px sans-serif; }
-.file-selection-comment-range { margin-left: auto; text-align: right; font-size: 16px; }
-.file-selection-comment-card textarea { box-sizing: border-box; flex: 1; min-height: 0; width: 100%; margin: 18px 0 10px; padding: 4px 0; border: 0; outline: none; resize: none; background: transparent; color: var(--color-vscode-fg, var(--color-text, #222)); font: 18px/1.5 sans-serif; }
+.file-selection-comment-zone { box-sizing: border-box; padding: 6px 8px 6px 0; background: rgba(128,128,128,.025); pointer-events: auto; }
+.file-selection-comment-card { box-sizing: border-box; height: 128px; padding: 10px 11px 11px; border: 1px solid var(--color-border, #e7e7e7); border-radius: 10px; background: #fff; box-shadow: 0 3px 9px #00000008; color: #999; font: 12px/1.5 sans-serif; display: flex; flex-direction: column; }
+.file-selection-comment-header { display: flex; align-items: center; gap: 9px; min-height: 24px; }
+.file-selection-avatar { display: flex; align-items: center; justify-content: center; flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%; background: #9ca582; color: white; font: 9px sans-serif; }
+.file-selection-comment-range { flex: 1; min-width: 0; margin-left: auto; text-align: right; font-size: 12px; }
+.file-selection-comment-card textarea { box-sizing: border-box; flex: 1; min-height: 0; width: 100%; margin: 12px 0 7px; padding: 2px 0; border: 0; outline: none; resize: none; background: transparent; color: #222; font: 14px/1.5 sans-serif; }
 .file-selection-comment-card textarea::placeholder { color: #c6c6c6; }
-.file-selection-comment-footer { display: flex; align-items: center; gap: 16px; height: 36px; flex-shrink: 0; }
-.file-selection-microphone { margin-right: auto; display: flex; align-items: center; padding-left: 8px; color: var(--color-vscode-fg, var(--color-text, #202427)); }
-.file-selection-comment-footer button { border: 0; background: transparent; padding: 5px 0; color: inherit; font: inherit; cursor: pointer; }
+.file-selection-comment-footer { display: flex; align-items: center; gap: 14px; height: 24px; flex-shrink: 0; }
+.file-selection-microphone { margin-right: auto; display: flex; align-items: center; padding-left: 5px; color: #202427; }
+.file-selection-microphone svg { width: 16px; height: 16px; }
+.file-selection-comment-footer button { border: 0; background: transparent; padding: 3px 0; color: inherit; font: inherit; cursor: pointer; }
 .file-selection-comment-footer button:focus-visible { outline: 2px solid #999; outline-offset: 2px; }
-.file-selection-comment-footer .file-selection-comment-submit { padding: 5px 13px; border-radius: 15px; background: #232627; color: #fff; }
+.file-selection-comment-footer .file-selection-comment-submit { padding: 3px 9px; border-radius: 10px; background: #232627; color: #fff; }
 .file-selection-comment-footer .file-selection-comment-submit:disabled { background: #a4a4a4; cursor: default; }
-.file-selection-comment-header { flex-wrap: wrap; }
-.file-selection-comment-range { flex: 1; min-width: 100px; }
 .file-selection-comment-card textarea:focus { outline: none !important; box-shadow: none !important; border: 0 !important; }
-.file-selection-comment-body { flex: 1; min-height: 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--color-vscode-fg, var(--color-text, #222)); }
+.file-selection-comment-body { flex: 1; min-height: 0; margin: 10px 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #222; }
+.vs-dark .file-selection-comment-card { background: #252526; border-color: #3c3c3c; }
+.vs-dark .file-selection-comment-card textarea, .vs-dark .file-selection-comment-body, .vs-dark .file-selection-microphone { color: #ddd; }
