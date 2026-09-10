@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { IconFile, IconSend } from "../icons";
 import { useI18n } from "../../i18n";
 import type { Artifact } from "./types";
@@ -11,6 +11,7 @@ interface ChatMessage {
 }
 
 interface ChatAreaProps {
+  quote?: { id: string; text: string } | null;
   onOpenArtifact: (artifact: Artifact) => void;
   /** 产物一生成就上报，供右侧「产物」Tab 展示完整列表（不用等用户点开卡片）。 */
   onArtifactCreated: (artifact: Artifact) => void;
@@ -21,11 +22,17 @@ const HTML_TRIGGER = /html|游戏|game|扫雷|minesweeper/i;
 const TEXT_TRIGGER = /文本|代码|txt|code/i;
 const ARTIFACT_TRIGGER = /创建|生成|写一个|create|generate/i;
 
-export default function ChatArea({ onOpenArtifact, onArtifactCreated }: ChatAreaProps) {
+export default function ChatArea({ onOpenArtifact, onArtifactCreated, quote }: ChatAreaProps) {
   const { t } = useI18n();
   const [messages, setMessages] = useState<ChatMessage[]>(t.chat.initialMessages);
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState(false);
+  const input = useRef<HTMLTextAreaElement>(null);
+  useEffect(() => {
+    if (!quote) return;
+    setDraft((value) => value ? `${value}\n\n${quote.text}` : quote.text);
+    input.current?.focus();
+  }, [quote]);
 
   const send = () => {
     const text = draft.trim();
@@ -109,6 +116,7 @@ export default function ChatArea({ onOpenArtifact, onArtifactCreated }: ChatArea
       <div className="shrink-0 border-t border-vscode-border p-3">
         <div className="mx-auto flex max-w-[720px] items-end gap-2 rounded-md border border-vscode-border-light bg-vscode-input-bg px-3 py-2">
           <textarea
+            ref={input}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}

@@ -4,6 +4,7 @@ import { DiffTab, type OpenDiffRequest } from "../../features/source-control";
 import { FileTab, type OpenFileRequest } from "../../features/explorer";
 import { useI18n } from "../../i18n";
 import ChatArea from "./ChatArea";
+import { describeSelection, type FileSelection } from "../file-selection";
 import ArtifactTab from "./ArtifactTab";
 import PoppedBrowserTab from "./PoppedBrowserTab";
 import type { PoppedBrowser } from "./Browser";
@@ -41,6 +42,11 @@ export default function MainArea({
 }: MainAreaProps) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>("chat");
+  const [chatQuote, setChatQuote] = useState<{ id: string; text: string } | null>(null);
+  const addSelectionToChat = (selection: FileSelection, instruction?: string) => {
+    setChatQuote({ id: crypto.randomUUID(), text: `${instruction ? instruction + "\n\n" : ""}${describeSelection(selection)}` });
+    setActiveTab("chat");
+  };
   const [artifacts, setArtifacts] = useState<Artifact[]>([]);
 
   // Source Control / Explorer 里点新文件时，自动切到对应标签页
@@ -175,11 +181,11 @@ export default function MainArea({
       </div>
 
       <div className="min-h-0 flex-1">
-        {activeTab === "chat" && <ChatArea onOpenArtifact={openArtifact} onArtifactCreated={onArtifactCreated} />}
+        <div className={activeTab === "chat" ? "h-full" : "hidden"}><ChatArea quote={chatQuote} onOpenArtifact={openArtifact} onArtifactCreated={onArtifactCreated} /></div>
         {activeTab === "diff" && openDiff && (
           <DiffTab path={openDiff.path} staged={openDiff.staged} commitHash={openDiff.commitHash} onClose={closeDiffTab} />
         )}
-        {activeTab === "file" && openFile && <FileTab path={openFile.path} onClose={closeFileTab} />}
+        {openFile && <div className={activeTab === "file" ? "h-full" : "hidden"}><FileTab key={openFile.path} path={openFile.path} onClose={closeFileTab} onAddToChat={addSelectionToChat} onRequestEdit={addSelectionToChat} /></div>}
         {activeTab === "browser" && openBrowser && <PoppedBrowserTab browser={openBrowser} onClose={closeBrowserTab} />}
         {typeof activeTab === "object" &&
           artifacts
