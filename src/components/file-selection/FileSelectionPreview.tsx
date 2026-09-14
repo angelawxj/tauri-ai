@@ -48,10 +48,17 @@ export default function FileSelectionPreview(props: FileSelectionPreviewProps) {
       const id = ++request.current;
       lastEdit.current = { selection, instruction }; setResumeEdit(null);
       setPending(true);
-      const result = await requestMockEdit(instance?.getModel()?.getValue() ?? props.content, selection, instruction);
-      if (id !== request.current) return;
-      modified.current = result.modified;
-      setEditingDiff(false); setDiff(result); setPending(false);
+      setSaveError(null);
+      try {
+        const result = await requestMockEdit(instance?.getModel()?.getValue() ?? props.content, selection, instruction);
+        if (id !== request.current) return;
+        modified.current = result.modified;
+        setEditingDiff(false); setDiff(result);
+      } catch (error) {
+        if (id !== request.current) return;
+        setResumeEdit(lastEdit.current);
+        setSaveError(error instanceof Error ? error.message : String(error));
+      } finally { if (id === request.current) setPending(false); }
     }} />}
     {pending && <div className="file-selection-diff-status" role="status">{zh ? "正在生成修改…" : "Generating edit…"}</div>}
     {saveError && <div className="file-selection-diff-status" role="alert">{saveError}</div>}

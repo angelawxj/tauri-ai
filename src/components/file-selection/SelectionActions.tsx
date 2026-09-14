@@ -40,9 +40,11 @@ export function SelectionActions({ path, editor: ed, language = "zh", onAddToCha
   }, [ed]);
   useEffect(() => {
     const outside = (event: PointerEvent) => {
+      // Keep each file's draft when using tabs or another file's editor.
+      if (!root.current?.closest(".file-selection")?.contains(event.target as Node)) return;
       if (!popup.current?.contains(event.target as Node)) dismiss();
     };
-    const escape = (event: KeyboardEvent) => { if (event.key === "Escape") dismiss(); };
+    const escape = (event: KeyboardEvent) => { if (event.key === "Escape" && root.current?.getBoundingClientRect().width) dismiss(); };
     document.addEventListener("pointerdown", outside);
     document.addEventListener("keydown", escape);
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };

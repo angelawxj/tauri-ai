@@ -86,6 +86,7 @@ export default function App() {
         projectError={projectError}
       />
       <MainArea
+        projectKey={activeProject?.id}
         openDiff={openDiff}
         onCloseDiff={() => setOpenDiff(null)}
         openFile={openFile}

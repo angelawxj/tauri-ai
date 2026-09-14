@@ -12,6 +12,7 @@ import { isRenderableName } from "./artifact-kind";
 import type { Artifact } from "./types";
 
 interface MainAreaProps {
+  projectKey?: string;
   openDiff: OpenDiffRequest | null;
   onCloseDiff: () => void;
   openFile: OpenFileRequest | null;
@@ -30,6 +31,7 @@ interface MainAreaProps {
 type ActiveTab = "chat" | "diff" | "file" | "browser" | { artifactId: string };
 
 export default function MainArea({
+  projectKey,
   openDiff,
   onCloseDiff,
   openFile,
@@ -42,6 +44,9 @@ export default function MainArea({
 }: MainAreaProps) {
   const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<ActiveTab>("chat");
+  const [files, setFiles] = useState<string[]>([]);
+  const [activeFile, setActiveFile] = useState<string | null>(null);
+  useEffect(() => { setFiles([]); setActiveFile(null); setActiveTab("chat"); }, [projectKey]);
   const [chatQuote, setChatQuote] = useState<{ id: string; text: string } | null>(null);
   const addSelectionToChat = (selection: FileSelection, instruction?: string) => {
     setChatQuote({ id: crypto.randomUUID(), text: `${instruction ? instruction + "\n\n" : ""}${describeSelection(selection)}` });
@@ -54,7 +59,10 @@ export default function MainArea({
     if (openDiff) setActiveTab("diff");
   }, [openDiff]);
   useEffect(() => {
-    if (openFile) setActiveTab("file");
+    if (openFile) {
+      setFiles((items) => items.includes(openFile.path) ? items : [...items, openFile.path]);
+      setActiveFile(openFile.path); setActiveTab("file");
+    }
   }, [openFile]);
   useEffect(() => {
     if (openBrowser) setActiveTab("browser");
@@ -64,9 +72,14 @@ export default function MainArea({
     onCloseDiff();
     setActiveTab("chat");
   };
-  const closeFileTab = () => {
-    onCloseFile();
-    setActiveTab("chat");
+  const closeFileTab = (path: string) => {
+    const remaining = files.filter((item) => item !== path);
+    setFiles(remaining);
+    if (openFile?.path === path) onCloseFile();
+    if (activeFile === path) {
+      setActiveFile(remaining[remaining.length - 1] ?? null);
+      if (!remaining.length && activeTab === "file") setActiveTab("chat");
+    }
   };
   const closeBrowserTab = () => {
     onCloseBrowser();
@@ -91,12 +104,11 @@ export default function MainArea({
   };
 
   const diffFileName = openDiff?.path.split("/").pop() ?? "";
-  const fileName = openFile?.path.split("/").pop() ?? "";
   const isArtifactActive = (id: string) => typeof activeTab === "object" && activeTab.artifactId === id;
 
   return (
     <main className="flex min-w-0 flex-1 flex-col bg-vscode-bg">
-      <div className="flex h-9 shrink-0 items-stretch border-b border-vscode-border bg-vscode-panel-header">
+      <div className="flex h-9 shrink-0 items-stretch overflow-x-auto border-b border-vscode-border bg-vscode-panel-header">
         <button
           type="button"
           onClick={() => setActiveTab("chat")}
@@ -112,7 +124,7 @@ export default function MainArea({
 
         {openDiff && (
           <div
-            className={`group relative flex items-center gap-1.5 pl-3 pr-1.5 text-[12px] transition-colors ${
+            className={`group relative flex shrink-0 items-center gap-1.5 pl-3 pr-1.5 text-[12px] transition-colors ${
               activeTab === "diff" ? "text-vscode-fg" : "text-vscode-fg-muted hover:text-vscode-fg"
             }`}
           >
@@ -127,22 +139,23 @@ export default function MainArea({
           </div>
         )}
 
-        {openFile && (
+        {files.map((path) => (
           <div
+            key={path}
             className={`group relative flex items-center gap-1.5 pl-3 pr-1.5 text-[12px] transition-colors ${
-              activeTab === "file" ? "text-vscode-fg" : "text-vscode-fg-muted hover:text-vscode-fg"
+              activeTab === "file" && activeFile === path ? "text-vscode-fg" : "text-vscode-fg-muted hover:text-vscode-fg"
             }`}
           >
-            <button type="button" onClick={() => setActiveTab("file")} className="flex max-w-[160px] items-center gap-1.5" title={openFile.path}>
+            <button type="button" onClick={() => { setActiveFile(path); setActiveTab("file"); }} className="flex max-w-[160px] items-center gap-1.5" title={path}>
               <IconFile size={13} className="shrink-0" />
-              <span className="truncate">{fileName}</span>
+              <span className="truncate">{path.split(/[\\/]/).pop()}</span>
             </button>
-            <button type="button" onClick={closeFileTab} title={t.common.close} className="rounded p-0.5 opacity-0 hover:bg-vscode-list-hover group-hover:opacity-100">
+            <button type="button" onClick={() => closeFileTab(path)} title={t.common.close} className="rounded p-0.5 opacity-0 hover:bg-vscode-list-hover group-hover:opacity-100">
               <IconX size={11} />
             </button>
-            {activeTab === "file" && <span className="absolute inset-x-0 bottom-0 h-[2px] bg-vscode-accent" />}
+            {activeTab === "file" && activeFile === path && <span className="absolute inset-x-0 bottom-0 h-[2px] bg-vscode-accent" />}
           </div>
-        )}
+        ))}
 
         {openBrowser && (
           <div
@@ -185,7 +198,7 @@ export default function MainArea({
         {activeTab === "diff" && openDiff && (
           <DiffTab path={openDiff.path} staged={openDiff.staged} commitHash={openDiff.commitHash} onClose={closeDiffTab} />
         )}
-        {openFile && <div className={activeTab === "file" ? "h-full" : "hidden"}><FileTab key={openFile.path} path={openFile.path} onClose={closeFileTab} onAddToChat={addSelectionToChat} onRequestEdit={addSelectionToChat} /></div>}
+        {files.map((path) => <div key={`${projectKey}:${path}`} className={activeTab === "file" && activeFile === path ? "h-full" : "hidden"}><FileTab path={path} onClose={() => closeFileTab(path)} onAddToChat={addSelectionToChat} onRequestEdit={addSelectionToChat} /></div>)}
         {activeTab === "browser" && openBrowser && <PoppedBrowserTab browser={openBrowser} onClose={closeBrowserTab} />}
         {typeof activeTab === "object" &&
           artifacts
