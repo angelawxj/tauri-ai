@@ -725,6 +725,21 @@ pub fn explorer_read_file(path: String, state: State<ExplorerState>) -> Result<S
 }
 
 #[tauri::command]
+pub fn explorer_write_file(path: String, content: String, expected_content: String, state: State<ExplorerState>) -> Result<(), String> {
+    let root = project_root(&state);
+    let full = project_path(&root, &path)?.canonicalize().map_err(|e| e.to_string())?;
+    let canonical_root = root.canonicalize().map_err(|e| e.to_string())?;
+    if !full.starts_with(&canonical_root) {
+        return Err("文件不在当前项目中".to_string());
+    }
+    let current = fs::read_to_string(&full).map_err(|e| e.to_string())?;
+    if current != expected_content {
+        return Err("文件已被其他程序修改，请重新打开文件后再试".to_string());
+    }
+    fs::write(&full, content.as_bytes()).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub fn explorer_resolve_local_html_url(path: String) -> Result<String, String> {
     let full = PathBuf::from(&path);
     if !full.is_absolute() {

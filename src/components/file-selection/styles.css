@@ -33,6 +33,15 @@
   position: absolute; inset: 0; z-index: 5; pointer-events: none; overflow: hidden; color: var(--fs-fg);
 }
 .file-selection-editor { position: absolute; inset: 0; }
+.file-selection-diff-status { position: absolute; right: 16px; bottom: 12px; z-index: 8; display: flex; align-items: center; gap: 12px; padding: 6px 10px; border: 1px solid var(--color-vscode-border, #8884); border-radius: 6px; background: var(--color-vscode-bg, #fff); color: var(--color-vscode-fg, #333); font-size: 12px; }
+.file-selection-diff-status button { cursor: pointer; color: var(--color-vscode-accent, #1672cf); }
+.file-selection-diff-action-zone { position: absolute; z-index: 20; box-sizing: border-box; display: flex; justify-content: flex-end; align-items: flex-start; width: max-content; max-width: 100%; }
+.file-selection-diff-actions { display: flex; align-items: center; gap: 6px; padding: 6px; border: 0; border-radius: 8px; background: var(--fs-surface); }
+.file-selection-diff-actions button { padding: 4px 12px; border: 1px solid var(--color-vscode-border, #8883); border-radius: 6px; background: var(--fs-surface); color: var(--fs-text); cursor: pointer; font-size: 12px; line-height: 20px; box-shadow: 0 1px 3px #0000000d; }
+.file-selection-diff-actions button:hover, .file-selection-diff-actions button[aria-pressed="true"] { background: var(--fs-button-hover); }
+.file-selection-diff-actions button:focus-visible { outline: 2px solid var(--color-vscode-accent, #1672cf); outline-offset: 2px; }
+.file-selection-diff-actions .file-selection-diff-reject { color: var(--fs-diff-red); }
+.file-selection-diff-actions .file-selection-diff-accept { color: var(--fs-diff-green); }
 .file-selection-popover { pointer-events: auto; max-height: calc(100% - 8px); overflow-y: auto; }
 .file-selection-overlay button, .file-selection-overlay input, .file-selection-overlay textarea { box-sizing: border-box; font-family: inherit; }
 .file-selection-overlay button { border: 0; background: transparent; color: inherit; }
@@ -66,3 +75,61 @@
 .file-selection-comment-body { flex: 1; min-height: 0; margin: 10px 0; overflow: auto; white-space: pre-wrap; overflow-wrap: anywhere; color: #222; }
 .vs-dark .file-selection-comment-card { background: #252526; border-color: #3c3c3c; }
 .vs-dark .file-selection-comment-card textarea, .vs-dark .file-selection-comment-body, .vs-dark .file-selection-microphone { color: #ddd; }
+
+/* Reference diff palette, scoped to the selection edit preview. */
+.file-selection-inline-diff .monaco-editor {
+  --vscode-diffEditor-insertedLineBackground: var(--fs-diff-added);
+  --vscode-diffEditor-removedLineBackground: var(--fs-diff-removed);
+  --vscode-diffEditor-insertedTextBackground: transparent;
+  --vscode-diffEditor-removedTextBackground: transparent;
+  --vscode-diffEditorGutter-insertedLineBackground: var(--fs-diff-added-gutter);
+  --vscode-diffEditorGutter-removedLineBackground: var(--fs-diff-removed-gutter);
+}
+.file-selection-inline-diff .monaco-editor .gutter-insert {
+  border-left: 6px solid var(--fs-diff-green);
+  box-sizing: border-box;
+}
+.file-selection-inline-diff .monaco-editor .inline-deleted-margin-view-zone {
+  background: var(--fs-diff-removed-gutter);
+  box-shadow: inset -4px 0 var(--fs-surface);
+}
+.file-selection-inline-diff .monaco-editor .inline-deleted-margin-view-zone::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 6px;
+  background: repeating-linear-gradient(to bottom, var(--fs-diff-stripe) 0 1px, var(--fs-diff-stripe-gap) 1px 2px);
+}
+.file-selection-inline-diff .monaco-editor .file-selection-deleted-numbers {
+  position: absolute;
+  top: 0;
+  white-space: pre;
+  text-align: right;
+  color: var(--fs-diff-red);
+  pointer-events: none;
+}
+.file-selection-inline-diff .monaco-editor .file-selection-inserted-number { color: var(--fs-diff-green); }
+.file-selection-inline-diff .monaco-editor .inline-deleted-margin-view-zone .lightbulb-glyph { display: none; }
+.file-selection-inline-diff .monaco-editor .gutter-insert { box-shadow: inset -4px 0 var(--fs-surface); }
+
+/* Shared selection surface tokens; explicit, app, and system themes resolve on the wrapper. */
+.file-selection[data-theme="light"] {
+  --fs-surface: #fff; --fs-text: #202124; --fs-button-hover: #f3f3f3;
+  --fs-diff-added: #e7f4e7; --fs-diff-removed: #fbe6e2;
+  --fs-diff-added-gutter: #edf7ed; --fs-diff-removed-gutter: #fdece9;
+  --fs-diff-green: #00a240; --fs-diff-red: #e00000;
+  --fs-diff-stripe: #bd2d2a; --fs-diff-stripe-gap: #f7d9d4;
+  --fs-control-border: #e5e5e5;
+}
+.file-selection[data-theme="dark"] {
+  --fs-surface: #1e1e1e; --fs-text: #ddd; --fs-button-hover: #333;
+  --fs-diff-added: #203b29; --fs-diff-removed: #482b2b;
+  --fs-diff-added-gutter: #23372a; --fs-diff-removed-gutter: #3d2929;
+  --fs-diff-green: #73c991; --fs-diff-red: #f48771;
+  --fs-diff-stripe: #f48771; --fs-diff-stripe-gap: #482b2b;
+  --fs-control-border: #444;
+}
+.file-selection-diff-actions button { border-color: var(--fs-control-border); }
+.file-selection-diff-status { background: var(--fs-surface); color: var(--fs-text); border-color: var(--fs-control-border); }
+.file-selection-comment-card { background: var(--fs-surface); border-color: var(--fs-control-border); }
+.file-selection-comment-card textarea, .file-selection-comment-body, .file-selection-microphone { color: var(--fs-text); }

@@ -11,16 +11,18 @@ export interface SelectionActionsProps {
   language?: "zh" | "en";
   onAddToChat: (selection: FileSelection) => void;
   onRequestEdit: (selection: FileSelection, instruction: string) => void;
+  initialEdit?: { selection: FileSelection; instruction: string } | null;
 }
 
 /** Selection offsets always refer to the original, unmodified file content. */
-export function SelectionActions({ path, editor: ed, language = "zh", onAddToChat, onRequestEdit }: SelectionActionsProps) {
+export function SelectionActions({ path, editor: ed, language = "zh", onAddToChat, onRequestEdit, initialEdit }: SelectionActionsProps) {
   const zh = language === "zh";
   const root = useRef<HTMLDivElement>(null);
   const popup = useRef<HTMLDivElement>(null);
-  const { selection, position, dismiss: clearSelection } = useMonacoSelection(ed, path, root);
+  const { selection, position, dismiss: clearSelection, restore } = useMonacoSelection(ed, path, root);
   const [mode, setMode] = useState<"menu" | "comment" | "edit">("menu");
   const [draft, setDraft] = useState("");
+  const restoring = useRef(initialEdit);
 
   const [placement, setPlacement] = useState({ left: 0, top: 0 });
   const [comments, setComments] = useState<(FileSelection & { id: string; body: string })[]>([]);
@@ -46,7 +48,23 @@ export function SelectionActions({ path, editor: ed, language = "zh", onAddToCha
     return () => { document.removeEventListener("pointerdown", outside); document.removeEventListener("keydown", escape); };
   }, []);
 
-  useEffect(() => { setMode("menu"); setDraft(""); }, [selection]);
+  useEffect(() => {
+    const edit = restoring.current;
+    if (selection && edit && selection.start === edit.selection.start && selection.end === edit.selection.end) {
+      setMode("edit"); setDraft(edit.instruction); restoring.current = null;
+    } else { setMode("menu"); setDraft(""); }
+  }, [selection]);
+  useEffect(() => {
+    const model = ed?.getModel();
+    if (!ed || !model || !initialEdit) return;
+    restoring.current = initialEdit;
+    const start = model.getPositionAt(initialEdit.selection.start);
+    const end = model.getPositionAt(initialEdit.selection.end);
+    const range = { startLineNumber: start.lineNumber, startColumn: start.column, endLineNumber: end.lineNumber, endColumn: end.column };
+    ed.setSelection(range);
+    restore({ ...initialEdit.selection });
+    ed.revealRangeInCenterIfOutsideViewport(range);
+  }, [ed, initialEdit, restore]);
   useLayoutEffect(() => {
     if (!position || !root.current || !popup.current) return;
     const update = () => {

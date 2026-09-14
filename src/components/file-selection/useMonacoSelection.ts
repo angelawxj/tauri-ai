@@ -52,5 +52,5 @@ export function useMonacoSelection(ed: editor.IStandaloneCodeEditor | null, path
     return () => { decorations.clear(); subscriptions.forEach((subscription) => subscription.dispose()); };
   }, [ed, selection, root]);
 
-  return { selection, position, dismiss };
+  return { selection, position, dismiss, restore: setSelection };
 }
