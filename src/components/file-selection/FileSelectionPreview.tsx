@@ -4,9 +4,10 @@ import { MonacoFileEditor, type MonacoFileEditorProps } from "./MonacoFileEditor
 import { SelectionActions, type SelectionActionsProps } from "./SelectionActions";
 import "./styles.css";
 import { InlineEditDiff } from "./InlineEditDiff";
-import { requestMockEdit, type EditDiff } from "./mockEdit";
+import { requestMockEdit } from "./mockEdit";
+import type { EditDiff, RequestEdit } from "./editResult";
 
-export type FileSelectionPreviewProps = MonacoFileEditorProps & Omit<SelectionActionsProps, "editor"> & { simulateEdits?: boolean; onAcceptEdit?: (modified: string, original: string) => Promise<void> };
+export type FileSelectionPreviewProps = MonacoFileEditorProps & Omit<SelectionActionsProps, "editor"> & { requestEdit?: RequestEdit; simulateEdits?: boolean; onAcceptEdit?: (modified: string, original: string) => Promise<void> };
 
 export default function FileSelectionPreview(props: FileSelectionPreviewProps) {
   const [instance, setInstance] = useState<editor.IStandaloneCodeEditor | null>(null);
@@ -44,13 +45,13 @@ export default function FileSelectionPreview(props: FileSelectionPreviewProps) {
     <MonacoFileEditor {...props} content={content} onChange={(value) => { setContent(value); props.onChange?.(value); }} onEditorMount={(ed) => { setInstance(ed); props.onEditorMount?.(ed); }} />
     </div>
     {!diff && !pending && <SelectionActions editor={instance} path={props.path} language={props.language} initialEdit={resumeEdit} onAddToChat={props.onAddToChat} onRequestEdit={async (selection, instruction) => {
-      if (!props.simulateEdits) { props.onRequestEdit(selection, instruction); return; }
+      if (!props.requestEdit && !props.simulateEdits) { props.onRequestEdit(selection, instruction); return; }
       const id = ++request.current;
       lastEdit.current = { selection, instruction }; setResumeEdit(null);
       setPending(true);
       setSaveError(null);
       try {
-        const result = await requestMockEdit(instance?.getModel()?.getValue() ?? props.content, selection, instruction);
+        const result = await (props.requestEdit ?? requestMockEdit)(instance?.getModel()?.getValue() ?? props.content, selection, instruction);
         if (id !== request.current) return;
         modified.current = result.modified;
         setEditingDiff(false); setDiff(result);

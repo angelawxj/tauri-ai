@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { monaco, getMonacoLanguage } from "./monaco";
-import type { EditDiff } from "./mockEdit";
+import type { EditDiff } from "./editResult";
 
 export function InlineEditDiff({ diff, path, codeLanguage, editable = false, onChange, actions }: { diff: EditDiff; path: string; codeLanguage?: string; editable?: boolean; onChange?: (content: string) => void; actions?: ReactNode }) {
   const container = useRef<HTMLDivElement>(null);

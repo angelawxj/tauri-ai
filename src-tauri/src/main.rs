@@ -1,6 +1,7 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod explorer;
+mod ai;
 mod source_control;
 mod browser;
 
@@ -11,6 +12,7 @@ fn main() {
         .manage(source_control::git::RepoState::new())
         .manage(explorer::fs::ExplorerState::new())
         .invoke_handler(tauri::generate_handler![
+            ai::ai_edit_selection,
             browser::browser_eval,
             browser::browser_navigate,
             browser::browser_capture_screenshot,

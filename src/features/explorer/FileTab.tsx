@@ -5,6 +5,7 @@ import { useExplorerI18n } from "./i18n";
 import "./theme.css";
 import { FileSelectionPreview, type FileSelection } from "../../components/file-selection";
 import { useI18n } from "../../i18n";
+import { requestClaudeEdit } from "./requestEdit";
 
 interface FileTabProps {
   path: string;
@@ -61,7 +62,7 @@ export default function FileTab({ path, onClose, onAddToChat, onRequestEdit }: F
           <div className="px-1 py-1 text-vscode-fg-dim">{t.explorer.noFileSelected}</div>
         )}
         {!loading && !error && content && content.length > 0 && (
-          <FileSelectionPreview key={path} path={path} content={content} language={lang} simulateEdits onAddToChat={onAddToChat} onRequestEdit={onRequestEdit} onAcceptEdit={async (modified, original) => {
+          <FileSelectionPreview key={path} path={path} content={content} language={lang} requestEdit={requestClaudeEdit} onAddToChat={onAddToChat} onRequestEdit={onRequestEdit} onAcceptEdit={async (modified, original) => {
             await api.writeFile(path, modified, original);
             setContent(modified);
           }} />
